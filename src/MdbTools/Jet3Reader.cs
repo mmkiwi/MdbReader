@@ -6,7 +6,6 @@
 
 using MMKiwi.MdbTools.Mutable;
 
-using System.Buffers;
 using System.Buffers.Binary;
 using System.Collections;
 using System.Collections.Immutable;
@@ -45,14 +44,14 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
     private async Task<byte[]> ReadPageToBufferAsync(int pageNo, int start, int size, CancellationToken ct)
     {
         byte[] res = new byte[size];
-        await ReadPageToBufferAsync(pageNo, start, res, ct);
+        await ReadPageToBufferAsync(pageNo, start, res, ct).ConfigureAwait(false);
         return res;
     }
 
     private async Task ReadPageToBufferAsync(int pageNo, int start, Memory<byte> buffer, CancellationToken ct)
     {
         MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
-        await MdbStream.ReadAsync(buffer, ct);
+        await MdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
     }
     private void ReadPage(int pageNo)
     {
@@ -66,7 +65,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
         int pageNo = mapPtr >> 8;
         uint row = unchecked((uint)mapPtr & 0xff);
 
-        await ReadPageAsync(pageNo, ct);
+        await ReadPageAsync(pageNo, ct).ConfigureAwait(false);
 
         ThrowIfWrongPageType(PageType.Data);
         //byte 2 is unknown
@@ -108,7 +107,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
 
         while (dataLength > usedDataLength)
         {
-            nextPage = await ReadNextTablePage(nextPage, buffer.AsMemory(usedDataLength), ct);
+            nextPage = await ReadNextTablePage(nextPage, buffer.AsMemory(usedDataLength), ct).ConfigureAwait(false);
             usedDataLength += Constants.PageSize - 8;
         }
 
@@ -263,7 +262,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
     private async Task<int> ReadNextTablePage(int nextPage, Memory<byte> buffer, CancellationToken ct)
     {
         byte[] header = new byte[16];
-        await ReadPageToBufferAsync(nextPage, 0, header, ct);
+        await ReadPageToBufferAsync(nextPage, 0, header, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
         ThrowIfWrongPageType(PageType.TableDefinition, header);
 
@@ -278,7 +277,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
         int newLength = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(8));
         int autoNumber = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(12));
 
-        await ReadPageToBufferAsync(nextPage, 8, buffer[..Math.Min(buffer.Length, Constants.PageSize - 8)], ct);
+        await ReadPageToBufferAsync(nextPage, 8, buffer[..Math.Min(buffer.Length, Constants.PageSize - 8)], ct).ConfigureAwait(false);
 
         return newNextPage;
     }
@@ -307,7 +306,6 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
                 if (usageBitmap[j])
                     return pageStart + j;
             return 0;
-#warning TODO
         }
         else if (map[0] == 1)
         {
@@ -319,7 +317,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
                 int mapPage = BinaryPrimitives.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
                 if (mapPage == 0)
                     continue;
-                await ReadBitPage(mapPage, ct);
+                await ReadBitPage(mapPage, ct).ConfigureAwait(false);
 
                 BitArray usageBitmap = new(PageBuffer[4..]);
                 for (int j = startPage + 1; j < usageBitmap.Length; j++)
@@ -333,7 +331,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
 
     private async Task ReadBitPage(int mapPage, CancellationToken ct)
     {
-        await ReadPageAsync(mapPage, ct);
+        await ReadPageAsync(mapPage, ct).ConfigureAwait(false);
         ThrowIfWrongPageType(PageType.PageUseageBitmap);
 
     }
@@ -356,7 +354,7 @@ public sealed class Jet3Reader : IDisposable, IAsyncDisposable
         // | ???? | 2 bytes | offset_row | The record's location on this page         |
         // +--------------------------------------------------------------------------+
 
-        await ReadPageAsync(page, ct);
+        await ReadPageAsync(page, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
         ThrowIfWrongPageType(PageType.Data);
 

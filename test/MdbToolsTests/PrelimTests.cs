@@ -1,11 +1,9 @@
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using FluentAssertions;
 using FluentAssertions.Execution;
 
-using MMKiwi.MdbTools;
 using MMKiwi.MdbTools.Tests.Model;
 
 namespace MMKiwi.MdbTools.Tests;
@@ -15,7 +13,7 @@ public class PrelimTests
     [Fact]
     public async Task Test1()
     {
-        await using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
+        await using MdbHandle handle = await MdbHandle.Open("Databases/Northwind_Modified.mdb");
         Task<Database?> deserializeJson = ReadJson("Databases/Northwind_Modified.json");
         Task<IEnumerable<MdbTable>> loadTables = handle.GetUserTablesAsync();
 
@@ -38,8 +36,8 @@ public class PrelimTests
                 jsonTable.Columns.Should().ContainKey(col.Name).WhoseValue.Should().Be(col.Type);
             }
 
-            var rows = await table.GetRows(handle).ToListAsync();
-            rows.Should().HaveCount(jsonTable.Rows.Count());
+            var rows = await table.GetRows(handle, ct).ToListAsync(ct);
+            rows.Should().HaveCount(jsonTable.Rows.Length);
             int i = 0;
             foreach (var row in rows)
             {
@@ -47,7 +45,7 @@ public class PrelimTests
                 foreach (var field in row.Fields)
                 {
                     jsonRow.Should().ContainKey(field.Column.Name);
-                    var jv = jsonRow[field.Column.Name];
+                    var jv = (JsonElement)jsonRow[field.Column.Name];
                     if (jv.ValueKind == JsonValueKind.Null)
                         field.IsNull.Should().BeTrue();
                     else
@@ -89,6 +87,8 @@ public class PrelimTests
                             case ColumnType.Guid:
                                 field.AsGuid().Should().Be(jv.GetGuid());
                                 break;
+                            case ColumnType.Numeric:
+                                throw new NotImplementedException();
                             default:
                                 throw new NotImplementedException();
                         }
@@ -100,7 +100,7 @@ public class PrelimTests
         });
     }
 
-    private async Task<Database?> ReadJson(string jsonPath)
+    private static async Task<Database?> ReadJson(string jsonPath)
     {
         using var jsonFile = File.Open(jsonPath, FileMode.Open, FileAccess.Read);
         var options = new JsonSerializerOptions

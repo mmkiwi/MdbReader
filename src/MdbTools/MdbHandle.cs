@@ -18,7 +18,7 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
     {
         FileStream mdbFileStream = File.OpenRead(fileName);
         byte[] header = new byte[19];
-        await mdbFileStream.ReadExactlyAsync(header.AsMemory());
+        await mdbFileStream.ReadExactlyAsync(header.AsMemory()).ConfigureAwait(false);
 
         if (!header.ByteArrayCompare("\0\u0001\0\0Standard Jet DB"u8))
             throw new FormatException("File is not JET database");
@@ -31,19 +31,19 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
 
     private async Task<MdbTable> GetCatalogTableAsync(CancellationToken ct)
     {
-        return _catalogTable ??= new("MSysObjects", await Reader.ReadTableDefAsync(2, ct));
+        return _catalogTable ??= new("MSysObjects", await Reader.ReadTableDefAsync(2, ct).ConfigureAwait(false));
     }
 
     public async Task<IEnumerable<MdbTable>> GetUserTablesAsync(CancellationToken ct = default)
     {
         if (UserTables == null)
         {
-            MdbTable catalogTable = await GetCatalogTableAsync(ct);
+            MdbTable catalogTable = await GetCatalogTableAsync(ct).ConfigureAwait(false);
             UserTables = await EnumerateRows(catalogTable, ct)
                 .Where(r => r.Fields.First(f => f.Column.Name == "Type").AsInt16() == 1 &&
                             r.Fields.First(f => f.Column.Name == "Flags").AsInt32() == 0)
                 .SelectAwaitWithCancellation(CreateMdbTableFromRecord)
-                .ToListAsync();
+                .ToListAsync(ct).ConfigureAwait(false);
                 
         }
         return UserTables;
@@ -54,19 +54,19 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
         var result = row.Fields.ToDictionary(field => field.Column!.Name);
         var id = result["Id"].AsInt32();
         string name = result["Name"].AsStringNotNull();
-        return new MdbTable(name, await Reader.ReadTableDefAsync(id, ct));
+        return new MdbTable(name, await Reader.ReadTableDefAsync(id, ct).ConfigureAwait(false));
     }
 
     internal async IAsyncEnumerable<MdbDataRow> EnumerateRows(MdbTable table, [EnumeratorCancellation] CancellationToken ct)
     {
-        byte[] usageMap = await Reader.ReadUsageMap(table.UsedPagesPtr, ct);
-        byte[] freeMap = await Reader.ReadUsageMap(table.FreePagesPtr, ct);
+        byte[] usageMap = await Reader.ReadUsageMap(table.UsedPagesPtr, ct).ConfigureAwait(false);
+        byte[] freeMap = await Reader.ReadUsageMap(table.FreePagesPtr, ct).ConfigureAwait(false);
 
         List<MdbField[]> results = new();
         int page = 0;
         while (true)
         {
-            page = await Reader.FindNextMap(usageMap, page, ct);
+            page = await Reader.FindNextMap(usageMap, page, ct).ConfigureAwait(false);
             if (page == 0)
                 break;
             await foreach (var row in Reader.ReadDataPageAsync(page, table, ct))
