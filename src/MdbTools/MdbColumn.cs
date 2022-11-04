@@ -10,7 +10,7 @@ using MMKiwi.MdbTools.Mutable;
 namespace MMKiwi.MdbTools;
 
 [DebuggerDisplay("MdbColumn {Name} {Type}")]
-public record class MdbColumn
+public sealed record class MdbColumn
 {
     internal MdbColumn(MdbBuilder.Column column)
     {

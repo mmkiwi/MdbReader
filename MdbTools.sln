@@ -1,31 +1,36 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30114.105
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.32916.344
 MinimumVisualStudioVersion = 10.0.40219.1
-
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{934FEB2E-D4AA-45C7-8D82-31C6CE03A139}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MdbTools", "src\MdbTools\MdbTools.csproj", "{9C48D4A3-50C6-439C-B8C6-0379E60AB979}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MdbTools", "src\MdbTools\MdbTools.csproj", "{9C48D4A3-50C6-439C-B8C6-0379E60AB979}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MdbToolsTests", "test\MdbToolsTests\MdbToolsTests.csproj", "{C9071C68-9746-4C93-8892-8B72C24941CE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C9071C68-9746-4C93-8892-8B72C24941CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9071C68-9746-4C93-8892-8B72C24941CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9071C68-9746-4C93-8892-8B72C24941CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9071C68-9746-4C93-8892-8B72C24941CE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979} = {934FEB2E-D4AA-45C7-8D82-31C6CE03A139}
 	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1956DF4B-B02E-4AD1-A7BD-983CE3979CD6}
+	EndGlobalSection
 EndGlobal
-
-# This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, You can obtain one at https://mozilla.org/MPL/2.0/.

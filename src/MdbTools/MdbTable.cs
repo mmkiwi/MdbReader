@@ -11,7 +11,7 @@ using MMKiwi.MdbTools.Mutable;
 namespace MMKiwi.MdbTools;
 
 [DebuggerDisplay("MdbTable {Name}")]
-public record class MdbTable
+public sealed record class MdbTable
 {
     internal MdbTable(string name, MdbBuilder.Table tableBuilder)
     {
@@ -28,6 +28,11 @@ public record class MdbTable
         FreePagesPtr = tableBuilder.FreePagesPtr;
         FirstPage = tableBuilder.FirstPage;
         Columns = tableBuilder.Columns?.Select(c => new MdbColumn(c)).ToImmutableArray() ?? ImmutableArray<MdbColumn>.Empty;
+    }
+
+    public IAsyncEnumerable<MdbDataRow> GetRows(MdbHandle handle, CancellationToken ct = default)
+    {
+        return handle.EnumerateRows(this,ct);
     }
 
     public string Name { get; }
