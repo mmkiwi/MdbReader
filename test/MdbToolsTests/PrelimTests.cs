@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -13,20 +14,13 @@ public class PrelimTests
     [Fact]
     public async Task Test1()
     {
-        await using MdbHandle handle = await MdbHandle.Open("Databases/Northwind_Modified.mdb");
-        Task<Database?> deserializeJson = ReadJson("Databases/Northwind_Modified.json");
-        Task<IEnumerable<MdbTable>> loadTables = handle.GetUserTablesAsync();
-
-        await Task.WhenAll(deserializeJson, loadTables);
-
-
-
-        using var _ = new AssertionScope();
-
+        await using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
+        Task<Database?> deserializeJson = ReadJson("Databases/Northwind_Modified.mdb.json");
+       
         Database? jsonDatabase = await deserializeJson;
         jsonDatabase.Should().NotBeNull();
 
-        await Parallel.ForEachAsync(await loadTables, async (table, ct) =>
+        await Parallel.ForEachAsync(handle.Tables, async (MdbTable table, CancellationToken ct) =>
         {
             jsonDatabase!.Tables.Should().ContainKey(table.Name);
             Table jsonTable = jsonDatabase.Tables[table.Name];
@@ -36,7 +30,7 @@ public class PrelimTests
                 jsonTable.Columns.Should().ContainKey(col.Name).WhoseValue.Should().Be(col.Type);
             }
 
-            var rows = await table.GetRows(handle, ct).ToListAsync(ct);
+            var rows = await table.GetRowsAsync(handle, ct).ToListAsync(ct);
             rows.Should().HaveCount(jsonTable.Rows.Length);
             int i = 0;
             foreach (var row in rows)
@@ -45,11 +39,12 @@ public class PrelimTests
                 foreach (var field in row.Fields)
                 {
                     jsonRow.Should().ContainKey(field.Column.Name);
-                    var jv = (JsonElement)jsonRow[field.Column.Name];
+                    JsonElement jv = jsonRow[field.Column.Name];
                     if (jv.ValueKind == JsonValueKind.Null)
                         field.IsNull.Should().BeTrue();
                     else
                     {
+                        
                         switch (field.Column.Type)
                         {
                             case ColumnType.Boolean:
@@ -102,13 +97,13 @@ public class PrelimTests
 
     private static async Task<Database?> ReadJson(string jsonPath)
     {
-        using var jsonFile = File.Open(jsonPath, FileMode.Open, FileAccess.Read);
+        await using var jsonFile = File.OpenRead(jsonPath);
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
             TypeInfoResolver = JsonContext.Default,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
-        return await JsonSerializer.DeserializeAsync<Database>(jsonFile, options);
+        return await JsonSerializer.DeserializeAsync(jsonFile, typeof(Database), options) as Database;
     }
 }

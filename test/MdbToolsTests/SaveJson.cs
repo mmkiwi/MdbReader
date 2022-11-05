@@ -5,10 +5,10 @@ using System.Text.Json.Serialization;
 using MMKiwi.MdbTools;
 using MMKiwi.MdbTools.Tests.Model;
 
-await using MdbHandle handle = await MdbHandle.Open("test/MdbToolsTests/Databases/Northwind_Modified.mdb");
-var tables = await handle.GetUserTablesAsync();
+await using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
+var tables = handle.Tables;
 
-Dictionary<string, Table> outTables = new(tables.Count());
+Dictionary<string, Table> outTables = new(tables.Length);
 
 foreach (var table in tables)
 {
@@ -19,10 +19,10 @@ foreach (var table in tables)
         {
             outColumns[column.Name] = column.Type;
         }
-        List<Dictionary<string, object>> outRows = new(table.NumRows);
-        await foreach (var row in table.GetRows(handle))
+        List<Dictionary<string, JsonElement>> outRows = new(table.NumRows);
+        await foreach (var row in table.GetRowsAsync(handle))
         {
-            var fields = row.Fields.ToDictionary(f => f.Column.Name, f => f.Value);
+            outRows.Add(row.Fields.ToDictionary(f => f.Column.Name, f => JsonSerializer.SerializeToElement(f.Value)));
         }
 
         outTables[table.Name] = new Table(outColumns.ToImmutableDictionary(),
@@ -41,5 +41,5 @@ var options = new JsonSerializerOptions
     Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 };
 
-using var jsonFile = File.Open("test/MdbToolsTests/Databases/Northwind_Modified.mdb.json", FileMode.Open, FileAccess.Write);
+using var jsonFile = File.Open("Databases/Northwind_Modified.mdb.json", FileMode.Create, FileAccess.Write);
 await JsonSerializer.SerializeAsync(jsonFile, new Database(outTables.ToImmutableDictionary()), options);

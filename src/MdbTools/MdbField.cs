@@ -163,7 +163,6 @@ public sealed record class MdbField
         return conversionFunc(BinaryValue.AsSpan());
     }
 
-
     private delegate T ConversionFunction<T>(ReadOnlySpan<byte> inArray)
         where T : class;
 

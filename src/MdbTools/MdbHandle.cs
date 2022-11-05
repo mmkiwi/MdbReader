@@ -4,7 +4,9 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
+using System.Text;
 
 namespace MMKiwi.MdbTools;
 public sealed class MdbHandle : IDisposable, IAsyncDisposable
@@ -12,44 +14,56 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
     private MdbHandle(Jet3Reader reader)
     {
         Reader = reader;
+        _userTables = new(GetUserTables, true);
     }
 
-    public async static Task<MdbHandle> Open(string fileName)
+    public static MdbHandle Open(string fileName)
     {
-        FileStream mdbFileStream = File.OpenRead(fileName);
+        using FileStream mdbFileStream = File.OpenRead(fileName);
+
+        (var jetVersion, var encoding) = GetJetVersion(mdbFileStream);
+
+        return new(jetVersion == 0 ? new Jet3FileReader(fileName, encoding) : throw new Exception());
+    }
+
+    public static MdbHandle Open(Stream stream, bool disableAsyncForThreadSafety)
+    {
+        if (!stream.CanSeek || !stream.CanRead)
+            throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
+
+        (var jetVersion, var encoding) = GetJetVersion(stream);
+
+        return new(jetVersion == 0 ? new Jet3StreamReader(stream, encoding, disableAsyncForThreadSafety) : throw new Exception());
+    }
+
+    private static (int jetVersion, Encoding encoding) GetJetVersion(Stream mdbFileStream)
+    {
         byte[] header = new byte[19];
-        await mdbFileStream.ReadExactlyAsync(header.AsMemory()).ConfigureAwait(false);
+        mdbFileStream.ReadExactly(header);
 
         if (!header.ByteArrayCompare("\0\u0001\0\0Standard Jet DB"u8))
             throw new FormatException("File is not JET database");
 
         mdbFileStream.Seek(0x14, SeekOrigin.Begin);
         int jetVersion = mdbFileStream.ReadByte();
-        return new(jetVersion == 0 ? new Jet3Reader(mdbFileStream) : throw new Exception());
 
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var encoding = Encoding.GetEncoding(1252);
+
+        return (jetVersion, encoding);
     }
 
-    private async Task<MdbTable> GetCatalogTableAsync(CancellationToken ct)
+    public ImmutableArray<MdbTable> GetUserTables()
     {
-        return _catalogTable ??= new("MSysObjects", await Reader.ReadTableDefAsync(2, ct).ConfigureAwait(false));
+        MdbTable catalogTable = new("MSysObjects", Reader.ReadTableDef(2));
+        return EnumerateRows(catalogTable)
+            .Where(r => r.Fields.First(f => f.Column.Name == "Type").AsInt16() == 1 &&
+                        r.Fields.First(f => f.Column.Name == "Flags").AsInt32() == 0)
+            .Select(CreateMdbTableFromRecord)
+            .ToImmutableArray();
     }
 
-    public async Task<IEnumerable<MdbTable>> GetUserTablesAsync(CancellationToken ct = default)
-    {
-        if (UserTables == null)
-        {
-            MdbTable catalogTable = await GetCatalogTableAsync(ct).ConfigureAwait(false);
-            UserTables = await EnumerateRows(catalogTable, ct)
-                .Where(r => r.Fields.First(f => f.Column.Name == "Type").AsInt16() == 1 &&
-                            r.Fields.First(f => f.Column.Name == "Flags").AsInt32() == 0)
-                .SelectAwaitWithCancellation(CreateMdbTableFromRecord)
-                .ToListAsync(ct).ConfigureAwait(false);
-                
-        }
-        return UserTables;
-    }
-
-    private async ValueTask<MdbTable> CreateMdbTableFromRecord(MdbDataRow row, CancellationToken ct)
+    private async ValueTask<MdbTable> CreateMdbTableFromRecordAsync(MdbDataRow row, CancellationToken ct)
     {
         var result = row.Fields.ToDictionary(field => field.Column!.Name);
         var id = result["Id"].AsInt32();
@@ -57,16 +71,24 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
         return new MdbTable(name, await Reader.ReadTableDefAsync(id, ct).ConfigureAwait(false));
     }
 
-    internal async IAsyncEnumerable<MdbDataRow> EnumerateRows(MdbTable table, [EnumeratorCancellation] CancellationToken ct)
+    private MdbTable CreateMdbTableFromRecord(MdbDataRow row)
     {
-        byte[] usageMap = await Reader.ReadUsageMap(table.UsedPagesPtr, ct).ConfigureAwait(false);
-        byte[] freeMap = await Reader.ReadUsageMap(table.FreePagesPtr, ct).ConfigureAwait(false);
+        var result = row.Fields.ToDictionary(field => field.Column!.Name);
+        var id = result["Id"].AsInt32();
+        string name = result["Name"].AsStringNotNull();
+        return new MdbTable(name, Reader.ReadTableDef(id));
+    }
+
+    internal async IAsyncEnumerable<MdbDataRow> EnumerateRowsAsync(MdbTable table, [EnumeratorCancellation] CancellationToken ct)
+    {
+        byte[] usageMap = await Reader.ReadUsageMapAsync(table.UsedPagesPtr, ct).ConfigureAwait(false);
+        byte[] freeMap = await Reader.ReadUsageMapAsync(table.FreePagesPtr, ct).ConfigureAwait(false);
 
         List<MdbField[]> results = new();
         int page = 0;
         while (true)
         {
-            page = await Reader.FindNextMap(usageMap, page, ct).ConfigureAwait(false);
+            page = await Reader.FindNextMapAsync(usageMap, page, ct).ConfigureAwait(false);
             if (page == 0)
                 break;
             await foreach (var row in Reader.ReadDataPageAsync(page, table, ct))
@@ -81,11 +103,37 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
             if (result["Type"].AsInt16() != 1 || result["Flags"].AsInt32() == -2147483648)
                 continue;
         }
-
     }
 
-    private MdbTable? _catalogTable;
-    private List<MdbTable>? UserTables { get; set; }
+    internal IEnumerable<MdbDataRow> EnumerateRows(MdbTable table)
+    {
+        byte[] usageMap = Reader.ReadUsageMap(table.UsedPagesPtr);
+        byte[] freeMap = Reader.ReadUsageMap(table.FreePagesPtr);
+
+        List<MdbField[]> results = new();
+        int page = 0;
+        while (true)
+        {
+            page = Reader.FindNextMap(usageMap, page);
+            if (page == 0)
+                break;
+            foreach (var row in Reader.ReadDataPage(page, table))
+                yield return new(row);
+        }
+
+        for (int i = 4; i < results.Count; i++)
+        {
+            var result = results[i].ToDictionary(field => field.Column!.Name);
+            var id = result["Id"].AsInt32();
+            string name = result["Name"].AsStringNotNull();
+            if (result["Type"].AsInt16() != 1 || result["Flags"].AsInt32() == -2147483648)
+                continue;
+        }
+    }
+
+    private readonly Lazy<ImmutableArray<MdbTable>> _userTables;
+
+    public ImmutableArray<MdbTable> Tables => _userTables.Value;
 
     public ValueTask DisposeAsync() => Reader.DisposeAsync();
 

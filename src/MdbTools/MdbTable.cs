@@ -30,9 +30,14 @@ public sealed record class MdbTable
         Columns = tableBuilder.Columns?.Select(c => new MdbColumn(c)).ToImmutableArray() ?? ImmutableArray<MdbColumn>.Empty;
     }
 
-    public IAsyncEnumerable<MdbDataRow> GetRows(MdbHandle handle, CancellationToken ct = default)
+    public IAsyncEnumerable<MdbDataRow> GetRowsAsync(MdbHandle handle, CancellationToken ct = default)
     {
-        return handle.EnumerateRows(this,ct);
+        return handle.EnumerateRowsAsync(this,ct);
+    }
+
+    public IEnumerable<MdbDataRow> GetRows(MdbHandle handle)
+    {
+        return handle.EnumerateRows(this);
     }
 
     public string Name { get; }
