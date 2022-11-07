@@ -57,3 +57,11 @@ public enum IndexType : byte
     Primary = 0x01,
     Foreign = 0x02
 }
+
+[Flags]
+internal enum LVALType : byte
+{
+    Inline = 0x80,
+    LvalPageType1 = 0x40,
+    LvalPageType2 = 0x00
+}

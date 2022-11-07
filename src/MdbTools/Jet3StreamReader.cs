@@ -10,6 +10,7 @@ namespace MMKiwi.MdbTools;
 
 public class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
+
     private readonly object _lock = new();
 
     public Jet3StreamReader(Stream mdbStream, Encoding encoding, bool disableAsyncForThreadSafety) : base(encoding)

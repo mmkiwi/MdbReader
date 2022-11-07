@@ -4,22 +4,19 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using Microsoft.VisualBasic;
-
+using MMKiwi.MdbTools.Fields;
 using MMKiwi.MdbTools.Mutable;
 
 using System.Buffers.Binary;
 using System.Collections;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace MMKiwi.MdbTools;
 
-public abstract class Jet3Reader : IDisposable, IAsyncDisposable
+public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 {
     protected Jet3Reader(Encoding encoding)
     {
@@ -92,7 +89,7 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
             (nextPage, _) = await ReadNextTablePageAsync(nextPage, buffer.AsMemory(usedDataLength), ct).ConfigureAwait(false);
             usedDataLength += Constants.PageSize - 8;
         }
-        return ParseTable(startPage, buffer);
+        return ParseTable(startPage, buffer, Encoding);
     }
 
     internal MdbBuilder.Table ReadTableDef(int startPage)
@@ -109,10 +106,10 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
             (nextPage, _) = ReadNextTablePage(nextPage, buffer.AsSpan(usedDataLength));
             usedDataLength += Constants.PageSize - 8;
         }
-        return ParseTable(startPage, buffer);
+        return ParseTable(startPage, buffer, Encoding);
     }
 
-    private MdbBuilder.Table ParseTable(int startPage, ReadOnlySpan<byte> buffer)
+    private MdbBuilder.Table ParseTable(int startPage, ReadOnlySpan<byte> buffer, Encoding encoding)
     {
 
         // This will always be on the first page of the table def
@@ -144,7 +141,7 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
 
         for (int i = 0; i < table.NumCols; i++)
         {
-            table.Columns[i] = ProcessColumn(ref cursor, buffer);
+            table.Columns[i] = ProcessColumn(ref cursor, buffer, encoding);
         }
         for (int i = 0; i < table.NumCols; i++)
         {
@@ -198,11 +195,11 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
         }
     }
 
-    internal static MdbBuilder.Column ProcessColumn(ref int cursor, ReadOnlySpan<byte> buffer)
+    internal static MdbBuilder.Column ProcessColumn(ref int cursor, ReadOnlySpan<byte> buffer, Encoding encoding)
     {
         ReadOnlySpan<byte> columnEntry = buffer.Slice(cursor, 18);
         cursor += 18;
-        return new()
+        return new(encoding)
         {
             Type = (ColumnType)columnEntry[0],
             NumInclDeleted = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[1..]),
@@ -235,7 +232,7 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
         return index;
     }
 
-    internal string? ProcessIndexName(ref int cursor, Span<byte> buffer)
+    internal string? ProcessIndexName(ref int cursor, ReadOnlySpan<byte> buffer)
     {
         byte indexNameLen = buffer[cursor];
         ReadOnlySpan<byte> indexNameEntry = buffer.Slice(cursor, indexNameLen + 1);
@@ -369,7 +366,7 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
         throw new FormatException();
     }
 
-    internal async IAsyncEnumerable<MdbField[]> ReadDataPageAsync(int page, MdbTable table, [EnumeratorCancellation] CancellationToken ct)
+    internal async IAsyncEnumerable<List<IMdbField>> ReadDataPageAsync(int page, MdbTable table, HashSet<string> columnsToTake, [EnumeratorCancellation] CancellationToken ct)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -401,13 +398,13 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
             if (rowOffset.IsDeleted)
                 continue;
             else if (rowOffset.IsLookup)
-                yield return CrackRow(table, rowOffset, buffer);
+                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
             else
-                yield return CrackRow(table, rowOffset, buffer);
+                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
         }
     }
 
-    internal IEnumerable<MdbField[]> ReadDataPage(int page, MdbTable table)
+    internal IEnumerable<List<IMdbField>> ReadDataPage(int page, MdbTable table, HashSet<string> columnsToTake)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -439,15 +436,15 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
             if (rowOffset.IsDeleted)
                 continue;
             else if (rowOffset.IsLookup)
-                yield return CrackRow(table, rowOffset, buffer);
+                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
             else
-                yield return CrackRow(table, rowOffset, buffer);
+                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
         }
     }
 
-    private static MdbField[] CrackRow(MdbTable table, RowOffset row, ReadOnlySpan<byte> buffer)
+    private List<IMdbField> CrackRow(MdbTable table, RowOffset row, ReadOnlySpan<byte> buffer, HashSet<string> columnsToTake)
     {
-        MdbField[] fields = new MdbField[table.Columns.Length];
+        List<IMdbField> fields = new(table.Columns.Length);
         ReadOnlySpan<byte> region = buffer[row.StartOffset..row.EndOffset];
 
         byte numFixedCols = region[0];
@@ -471,26 +468,100 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
         for (int i = 0; i < table.Columns.Length; i++)
         {
             MdbColumn? column = table.Columns[i];
-            if (column.Flags.HasFlag(ColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
-            {
-                var field = new MdbField(column, !nullBitmask[i], region.Slice(column.Offset + 1, column.Length).ToImmutableArray());
-                fields[i] = field;
-                fixedColsFound++;
-            }
-            else if (!column.Flags.HasFlag(ColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
-            {
-                var startOffset = varColOffsets[column.OffsetVariable];
-                var endOffset = varColOffsets[column.OffsetVariable + 1];
-                var field = new MdbField(column, !nullBitmask[i], region[startOffset..endOffset].ToImmutableArray());
-                fields[i] = field;
-            }
-            else
-            {
-                fields[i] = new MdbField(column, true, ImmutableArray<byte>.Empty);
-            }
+            if (columnsToTake.Any() && !columnsToTake.Contains(column.Name))
+                continue;
+
+            fields.Add(ProcessRow(region, numFixedCols, !nullBitmask[i], numVarCols, varColOffsets, ref fixedColsFound, column));
         }
 
         return fields;
+    }
+
+    private IMdbField ProcessRow(ReadOnlySpan<byte> region, byte numFixedCols, bool isNull, byte numVarCols, int[] varColOffsets, ref int fixedColsFound, MdbColumn column)
+    {
+        if (column.Flags.HasFlag(ColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
+        {
+            var field = MdbFieldFactory.CreateField(this, column, isNull, region.Slice(column.Offset + 1, column.Length).ToImmutableArray());
+            fixedColsFound++;
+            return field;
+        }
+        else if (!column.Flags.HasFlag(ColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
+        {
+            var startOffset = varColOffsets[column.OffsetVariable];
+            var endOffset = varColOffsets[column.OffsetVariable + 1];
+            return MdbFieldFactory.CreateField(this, column, isNull, region[startOffset..endOffset].ToImmutableArray());
+
+        }
+        return MdbFieldFactory.CreateField(this, column, true, ImmutableArray<byte>.Empty);
+    }
+
+    private ImmutableArray<byte> ReadRowFromLvalPage(int pageNo, int rowNo)
+    {
+        Span<byte> buffer = new byte[Constants.PageSize];
+
+        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+
+        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
+            throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
+
+        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
+
+        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
+
+        int length = nextStart - start & Constants.OffsetMask;
+        int startOffset = start & Constants.OffsetMask;
+
+        if (startOffset > Constants.PageSize || startOffset > nextStart || nextStart > Constants.PageSize)
+            throw new FormatException($"Error reading long value (page {pageNo}, row {rowNo})");
+
+        return buffer.Slice(startOffset, length).ToImmutableArray();
+    }
+
+    private int ReadRowFromLvalPage(int pageNo, int rowNo, Span<byte> oleBuffer)
+    {
+        Span<byte> buffer = new byte[Constants.PageSize];
+        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+
+        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
+            throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
+
+        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
+
+        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
+
+        int length = nextStart - start & Constants.OffsetMask;
+        int startOffset = start & Constants.OffsetMask;
+
+        if (startOffset > Constants.PageSize || startOffset > nextStart || nextStart > Constants.PageSize)
+            throw new FormatException($"Error reading long value (page {pageNo}, row {rowNo})");
+
+        buffer.Slice(startOffset, length).CopyTo(oleBuffer);
+        return length;
+    }
+
+    private (int numRead, int nextPage) ReadRowFromLvalPage2(int pageNo, int rowNo, Span<byte> oleBuffer)
+    {
+        Span<byte> buffer = new byte[Constants.PageSize];
+        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+
+        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
+            throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
+
+        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
+
+        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
+
+        int length = nextStart - start & Constants.OffsetMask;
+        int startOffset = start & Constants.OffsetMask;
+
+        ReadOnlySpan<byte> recordBuffer = buffer.Slice(startOffset, length);
+        int nextPage = BinaryPrimitives.ReadInt32LittleEndian(recordBuffer);
+        if (startOffset > Constants.PageSize || startOffset > nextStart || nextStart > Constants.PageSize)
+            throw new FormatException($"Error reading long value (page {pageNo}, row {rowNo})");
+
+        recordBuffer[4..].CopyTo(oleBuffer);
+
+        return (length - 4, nextPage);
     }
 
     private static int[] GetVarColOffsets(ReadOnlySpan<byte> rowRegion, int nullBitmaskSize, byte numVarCols)
@@ -507,11 +578,9 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
 
         int[] varColOffsets = new int[numVarCols + 1];
 
-        varColOffsets[^1] = colPtr;
-
         var jumpsUsed = 0;
 
-        for (int i = 0; i < numVarCols; i++)
+        for (int i = 0; i < numVarCols + 1; i++)
         {
             while (jumpsUsed < numJumps && i == rowRegion[Index.FromEnd(nullBitmaskSize + jumpsUsed + i)])
             {
@@ -532,7 +601,7 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
         RowOffset[] rowOffsets = new RowOffset[numRows];
         for (int i = 0; i < numRows; i++)
         {
-            ushort offset = BinaryPrimitives.ReadUInt16LittleEndian(region[(i * 2)..]); ;
+            ushort offset = BinaryPrimitives.ReadUInt16LittleEndian(region[(i * 2)..]);
             rowOffsets[i].StartOffset = unchecked((ushort)(
                                        offset & 0b0001_1111_1111_1111));
             rowOffsets[i].IsLookup = (offset & 0b1000_0000_0000_0000) > 0;
@@ -550,17 +619,22 @@ public abstract class Jet3Reader : IDisposable, IAsyncDisposable
     public abstract void Dispose();
     public abstract ValueTask DisposeAsync();
 
-    [DebuggerDisplay($"MdbOffset Length {{{nameof(Length)}}}")]
+    [DebuggerDisplay("MdbOffset {StartOffset} - {EndOffset} ({Length} bytes)")]
     internal record struct RowOffset(ushort StartOffset, ushort EndOffset, bool IsLookup, bool IsDeleted)
     {
         public int Length => EndOffset - StartOffset;
     }
 
-    protected static class Constants
+    protected internal static class Constants
     {
-        public const int PageSize = 2048;
+        public const ushort PageSize = 2048;
         public const int HeaderSize = 126;
         public const int UsageMapLen = (PageSize - 4) * 8;
+        public const ushort OffsetMask = 0x1fff;
+        public const int RowCountOffset = 8;
+
+        public static ReadOnlySpan<byte> LvalString => "LVAL"u8;
+
         public static class TableDef
         {
             public const byte Header = 0x02;

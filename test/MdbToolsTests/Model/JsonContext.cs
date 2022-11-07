@@ -14,7 +14,7 @@ namespace MMKiwi.MdbTools.Tests.Model;
 [JsonSerializable(typeof(byte[]))]
 [JsonSerializable(typeof(DateTime))]
 [JsonSerializable(typeof(string))]
-internal partial class JsonContext : JsonSerializerContext
+internal sealed partial class JsonContext : JsonSerializerContext
 {
     
 }

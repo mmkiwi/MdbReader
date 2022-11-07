@@ -1,14 +1,16 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using MMKiwi.MdbTools;
+using MMKiwi.MdbTools.Fields;
 using MMKiwi.MdbTools.Tests.Model;
 
-await using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
+using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
 var tables = handle.Tables;
 
-Dictionary<string, Table> outTables = new(tables.Length);
+Dictionary<string, Table?> outTables = new(tables.Length);
 
 foreach (var table in tables)
 {
@@ -20,9 +22,14 @@ foreach (var table in tables)
             outColumns[column.Name] = column.Type;
         }
         List<Dictionary<string, JsonElement>> outRows = new(table.NumRows);
-        await foreach (var row in table.GetRowsAsync(handle))
+        foreach (var row in table.GetRows(handle))
         {
-            outRows.Add(row.Fields.ToDictionary(f => f.Column.Name, f => JsonSerializer.SerializeToElement(f.Value)));
+            outRows.Add(row.Fields.ToDictionary(f => f.Column.Name, f => JsonSerializer.SerializeToElement(f switch
+            {
+                MdbOleField fOle => ReadOle(fOle),
+                MdbMemoField fMemo => ReadMemo(fMemo),
+                _ => f.Value
+            })));
         }
 
         outTables[table.Name] = new Table(outColumns.ToImmutableDictionary(),
@@ -34,6 +41,25 @@ foreach (var table in tables)
     }
 }
 
+byte[]? ReadOle(MdbOleField fOle)
+{
+    if (fOle.Value == null) return null;
+    using (fOle.Value)
+    {
+        return fOle.Value.ReadToEnd();
+    }
+}
+
+
+string? ReadMemo(MdbMemoField fOle)
+{
+    if (fOle.Value == null) return null;
+    using (fOle.Value)
+    {
+        return fOle.Value.ReadToEnd();
+    }
+}
+
 var options = new JsonSerializerOptions
 {
     WriteIndented = true,
@@ -42,4 +68,4 @@ var options = new JsonSerializerOptions
 };
 
 using var jsonFile = File.Open("Databases/Northwind_Modified.mdb.json", FileMode.Create, FileAccess.Write);
-await JsonSerializer.SerializeAsync(jsonFile, new Database(outTables.ToImmutableDictionary()), options);
+JsonSerializer.Serialize(jsonFile, new Database(outTables.ToImmutableDictionary()), options);

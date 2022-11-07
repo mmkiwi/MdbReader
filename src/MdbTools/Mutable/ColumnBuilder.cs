@@ -4,11 +4,17 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Text;
+
 namespace MMKiwi.MdbTools.Mutable;
 public static partial class MdbBuilder
 {
     internal class Column
     {
+        public Column(Encoding encoding)
+        {
+            Encoding = encoding;
+        }
         public ColumnType Type { get; set; }
         public ushort NumInclDeleted { get; set; }
         public ushort OffsetVariable { get; set; }
@@ -21,5 +27,6 @@ public static partial class MdbBuilder
         public string? Name { get; set; }
         public int UsedPages { get; internal set; }
         public int FreePages { get; internal set; }
+        public Encoding Encoding { get; }
     }
 }

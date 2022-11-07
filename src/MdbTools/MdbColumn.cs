@@ -5,6 +5,8 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Diagnostics;
+using System.Text;
+
 using MMKiwi.MdbTools.Mutable;
 
 namespace MMKiwi.MdbTools;
@@ -24,6 +26,7 @@ public sealed record class MdbColumn
         Offset = column.Offset;
         Length = column.Length;
         Name = column.Name!;
+        Encoding = column.Encoding;
     }
 
     public ColumnType Type { get; }
@@ -36,4 +39,5 @@ public sealed record class MdbColumn
     public ushort Offset { get; }
     public ushort Length { get; }
     public string Name { get; }
+    public Encoding Encoding { get; }
 }

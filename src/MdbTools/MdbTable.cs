@@ -32,12 +32,12 @@ public sealed record class MdbTable
 
     public IAsyncEnumerable<MdbDataRow> GetRowsAsync(MdbHandle handle, CancellationToken ct = default)
     {
-        return handle.EnumerateRowsAsync(this,ct);
+        return handle.EnumerateRowsAsync(this, null ,ct);
     }
 
     public IEnumerable<MdbDataRow> GetRows(MdbHandle handle)
     {
-        return handle.EnumerateRows(this);
+        return handle.EnumerateRows(this, null);
     }
 
     public string Name { get; }

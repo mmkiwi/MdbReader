@@ -6,15 +6,17 @@
 
 using System.Collections.Immutable;
 
+using MMKiwi.MdbTools.Fields;
+
 namespace MMKiwi.MdbTools;
 
 public sealed record class MdbDataRow
 {
 
-    public MdbDataRow(IEnumerable<MdbField> fields)
+    public MdbDataRow(List<IMdbField> fields)
     {
         Fields = fields.ToImmutableArray();
     }
 
-    public ImmutableArray<MdbField> Fields { get; }
+    public ImmutableArray<IMdbField> Fields { get; }
 }

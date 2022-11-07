@@ -8,12 +8,12 @@ using System.Runtime.InteropServices;
 
 namespace MMKiwi.MdbTools;
 
-public static partial class BinaryExtensions
+internal static partial class BinaryExtensions
 {
     [LibraryImport("msvcrt.dll")]
     private static partial int memcmp(ReadOnlySpan<byte> b1, ReadOnlySpan<byte> b2, long count);
 
-    public static bool ByteArrayCompare(this ReadOnlySpan<byte> b1, ReadOnlySpan<byte> b2)
+    private static bool Compare(this ReadOnlySpan<byte> b1, ReadOnlySpan<byte> b2)
     {
         // Validate buffers are the same length.
         // This also ensures that the count does not exceed the length of either buffer.  
@@ -21,17 +21,12 @@ public static partial class BinaryExtensions
     }
 
     public static bool ByteArrayCompare(this Span<byte> b1, ReadOnlySpan<byte> b2)
-    {
-        // Validate buffers are the same length.
-        // This also ensures that the count does not exceed the length of either buffer.  
-        return b1.Length == b2.Length && memcmp(b1, b2, b1.Length) == 0;
-    }
+        => Compare(b1, b2);
 
     public static bool ByteArrayCompare(this byte[] b1, ReadOnlySpan<byte> b2)
-    {
-        // Validate buffers are the same length.
-        // This also ensures that the count does not exceed the length of either buffer.  
-        return b1.Length == b2.Length && memcmp(b1, b2, b1.Length) == 0;
-    }
+        => Compare(b1, b2);
+
+    public static bool ByteArrayCompare(this ReadOnlySpan<byte> b1, ReadOnlySpan<byte> b2)
+        => Compare(b1, b2);
 }
 

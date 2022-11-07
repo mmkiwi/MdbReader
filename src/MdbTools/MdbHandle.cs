@@ -8,6 +8,8 @@ using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+using MMKiwi.MdbTools.Fields;
+
 namespace MMKiwi.MdbTools;
 public sealed class MdbHandle : IDisposable, IAsyncDisposable
 {
@@ -56,78 +58,56 @@ public sealed class MdbHandle : IDisposable, IAsyncDisposable
     public ImmutableArray<MdbTable> GetUserTables()
     {
         MdbTable catalogTable = new("MSysObjects", Reader.ReadTableDef(2));
-        return EnumerateRows(catalogTable)
-            .Where(r => r.Fields.First(f => f.Column.Name == "Type").AsInt16() == 1 &&
-                        r.Fields.First(f => f.Column.Name == "Flags").AsInt32() == 0)
+        return EnumerateRows(catalogTable, new HashSet<string>()
+            {
+                "Id",
+                "Name",
+                 "Type",
+                 "Flags"
+            })
+            .Where(r => ((MdbIntField.Nullable)r.Fields.First(f => f.Column.Name == "Type")).Value == 1 &&
+                        ((MdbLongIntField.Nullable)r.Fields.First(f => f.Column.Name == "Flags")).Value == 0)
             .Select(CreateMdbTableFromRecord)
             .ToImmutableArray();
-    }
-
-    private async ValueTask<MdbTable> CreateMdbTableFromRecordAsync(MdbDataRow row, CancellationToken ct)
-    {
-        var result = row.Fields.ToDictionary(field => field.Column!.Name);
-        var id = result["Id"].AsInt32();
-        string name = result["Name"].AsStringNotNull();
-        return new MdbTable(name, await Reader.ReadTableDefAsync(id, ct).ConfigureAwait(false));
     }
 
     private MdbTable CreateMdbTableFromRecord(MdbDataRow row)
     {
         var result = row.Fields.ToDictionary(field => field.Column!.Name);
-        var id = result["Id"].AsInt32();
-        string name = result["Name"].AsStringNotNull();
+        int id = ((MdbLongIntField.Nullable)result["Id"]).Value ?? throw new FormatException("Could not get ID of table");
+        string name = ((MdbStringField.Nullable)result["Name"]).Value ?? throw new FormatException("Could not get Name of table"); ;
         return new MdbTable(name, Reader.ReadTableDef(id));
     }
 
-    internal async IAsyncEnumerable<MdbDataRow> EnumerateRowsAsync(MdbTable table, [EnumeratorCancellation] CancellationToken ct)
+    internal async IAsyncEnumerable<MdbDataRow> EnumerateRowsAsync(MdbTable table, HashSet<string>? columnsToTake, [EnumeratorCancellation] CancellationToken ct)
     {
         byte[] usageMap = await Reader.ReadUsageMapAsync(table.UsedPagesPtr, ct).ConfigureAwait(false);
         byte[] freeMap = await Reader.ReadUsageMapAsync(table.FreePagesPtr, ct).ConfigureAwait(false);
 
-        List<MdbField[]> results = new();
         int page = 0;
         while (true)
         {
             page = await Reader.FindNextMapAsync(usageMap, page, ct).ConfigureAwait(false);
             if (page == 0)
                 break;
-            await foreach (var row in Reader.ReadDataPageAsync(page, table, ct))
+            await foreach (var row in Reader.ReadDataPageAsync(page, table, columnsToTake ?? new(0), ct))
                 yield return new(row);
-        }
-
-        for (int i = 4; i < results.Count; i++)
-        {
-            var result = results[i].ToDictionary(field => field.Column!.Name);
-            var id = result["Id"].AsInt32();
-            string name = result["Name"].AsStringNotNull();
-            if (result["Type"].AsInt16() != 1 || result["Flags"].AsInt32() == -2147483648)
-                continue;
         }
     }
 
-    internal IEnumerable<MdbDataRow> EnumerateRows(MdbTable table)
+    internal IEnumerable<MdbDataRow> EnumerateRows(MdbTable table, HashSet<string>? columnsToTake)
     {
         byte[] usageMap = Reader.ReadUsageMap(table.UsedPagesPtr);
         byte[] freeMap = Reader.ReadUsageMap(table.FreePagesPtr);
 
-        List<MdbField[]> results = new();
         int page = 0;
         while (true)
         {
             page = Reader.FindNextMap(usageMap, page);
             if (page == 0)
                 break;
-            foreach (var row in Reader.ReadDataPage(page, table))
+            foreach (var row in Reader.ReadDataPage(page, table, columnsToTake ?? new(0)))
                 yield return new(row);
-        }
-
-        for (int i = 4; i < results.Count; i++)
-        {
-            var result = results[i].ToDictionary(field => field.Column!.Name);
-            var id = result["Id"].AsInt32();
-            string name = result["Name"].AsStringNotNull();
-            if (result["Type"].AsInt16() != 1 || result["Flags"].AsInt32() == -2147483648)
-                continue;
         }
     }
 
