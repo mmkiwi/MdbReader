@@ -6,17 +6,26 @@
 
 using System.Collections.Immutable;
 
-using MMKiwi.MdbTools.Fields;
+using MMKiwi.MdbTools.Values;
 
 namespace MMKiwi.MdbTools;
 
+/// <summary>
+/// A row in an Access Database
+/// </summary>
 public sealed record class MdbDataRow
 {
 
-    public MdbDataRow(List<IMdbField> fields)
+    internal MdbDataRow(List<IMdbValue> fields)
     {
-        Fields = fields.ToImmutableArray();
+        Values = fields.ToImmutableArray();
     }
 
-    public ImmutableArray<IMdbField> Fields { get; }
+    /// <summary>
+    /// The values of all columns in the row
+    /// </summary>
+    /// <remarks>
+    /// 
+    /// </remarks>
+    public ImmutableArray<IMdbValue> Values { get; }
 }

@@ -5,8 +5,14 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 namespace MMKiwi.MdbTools.Mutable;
-public static partial class MdbBuilder
+/// <summary>
+/// A container class for mutable builders for the publicly visiable, immutable Mdb obejects
+/// </summary>
+internal static partial class MdbBuilder
 {
+    /// <summary>
+    /// The mutable builder for a future MdbIndex class.
+    /// </summary>
     internal class Index
     {
         public int IndexNum { get; set; }

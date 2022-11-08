@@ -4,13 +4,13 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Text;
+using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
 
-public class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
+internal class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
-    public Jet3FileReader(string filePath, Encoding encoding) : base(encoding)
+    public Jet3FileReader(string filePath, MdbHeaderInfo db) : base(db)
     {
         FilePath = filePath;
         MdbStream = OpenStream();
@@ -20,7 +20,6 @@ public class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
 
     /// <summary>
     /// This stream is only used to keep the file locked so nobody can edit or delete it while we are in it.
-    /// TODO, make this configurable
     /// </summary>
     private FileStream MdbStream { get; }
 
@@ -35,6 +34,7 @@ public class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
         {
             stream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
             stream.Read(buffer.Span);
+            DecryptPage(pageNo, buffer.Span);
         }
     }
 
@@ -43,8 +43,17 @@ public class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
         FileStream stream = OpenStream();
         stream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
         stream.Read(buffer);
+        DecryptPage(pageNo, buffer);
     }
 
-    public override ValueTask DisposeAsync() => MdbStream.DisposeAsync();
-    public override void Dispose() => MdbStream.Dispose();
+    public override async ValueTask DisposeAsync()
+    {
+        IsDisposed = true;
+        await MdbStream.DisposeAsync().ConfigureAwait(false);
+    }
+    public override void Dispose()
+    {
+        IsDisposed = true;
+        MdbStream.Dispose();
+    }
 }

@@ -11,33 +11,79 @@ using MMKiwi.MdbTools.Mutable;
 
 namespace MMKiwi.MdbTools;
 
+/// <summary>
+/// Represents a column in an Access Database
+/// </summary>
 [DebuggerDisplay("MdbColumn {Name} {Type}")]
 public sealed record class MdbColumn
 {
     internal MdbColumn(MdbBuilder.Column column)
     {
         Type = column.Type;
-        NumInclDeleted = column.NumInclDeleted;
+        IndexIncludingDeleted = column.NumInclDeleted;
         OffsetVariable = column.OffsetVariable;
-        ColNum = column.ColNum;
+        Index = column.ColNum;
         SortOrder = column.SortOrder;
-        Misc = column.Misc;
+        Locale = column.Locale;
         Flags = column.Flags;
-        Offset = column.Offset;
+        OffsetFixed = column.OffsetFixed;
         Length = column.Length;
         Name = column.Name!;
         Encoding = column.Encoding;
     }
 
+    /// <summary>
+    /// The data type of the column.
+    /// </summary>
     public ColumnType Type { get; }
-    public ushort NumInclDeleted { get; }
-    public ushort OffsetVariable { get; }
-    public ushort ColNum { get; }
+
+    /// <summary>
+    /// The index of the column (including deleted columns)
+    /// </summary>
+    internal ushort IndexIncludingDeleted { get; }
+    /// <summary>
+    /// The offset from the start of the row to get variable-width columns
+    /// </summary>
+    internal ushort OffsetVariable { get; }
+
+    /// <summary>
+    /// The index of the column in the underlying database (0 = the first column)
+    /// </summary>
+    public int Index { get; }
+
+    /// <summary>
+    /// The column sort order (may not match the order in the underlying database file)
+    /// </summary>
     public ushort SortOrder { get; }
-    public ushort Misc { get; }
+
+    /// <summary>
+    /// The locale for the column
+    /// </summary>
+    public ushort Locale { get; }
+
+    /// <summary>
+    /// The flags set on the column. Use <see cref="Enum.HasFlag(Enum)" /> to see if the flag is set.
+    /// </summary>
     public ColumnFlags Flags { get; }
-    public ushort Offset { get; }
+
+    /// <summary>
+    /// The offset for the fixed-length columns
+    /// </summary>
+    internal ushort OffsetFixed { get; }
+
+    /// <summary>
+    /// The length of the column for fixed-length columns, or the max length for variable-length columns. For long
+    /// columns (<see cref="ColumnType.Memo" /> or <see cref="ColumnType.OLE" />), the length is zero.
+    /// </summary>
     public ushort Length { get; }
+
+    /// <summary>
+    /// The name of the column
+    /// </summary>
     public string Name { get; }
+
+    /// <summary>
+    /// The encoding of the column.
+    /// </summary>
     public Encoding Encoding { get; }
 }

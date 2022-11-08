@@ -1,13 +1,10 @@
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using FluentAssertions;
-using FluentAssertions.Execution;
 
-using MMKiwi.MdbTools;
-using MMKiwi.MdbTools.Fields;
+using MMKiwi.MdbTools.Values;
 using MMKiwi.MdbTools.Tests.Model;
 
 namespace MMKiwi.MdbTools.Tests;
@@ -18,10 +15,12 @@ public class PrelimTests
     public async Task TestAsync()
     {
         await using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
-        Task<Database?> deserializeJson = ReadJsonAsync("Databases/Northwind_Modified.mdb.json");
+        Task<MdbJsonDatabase?> deserializeJson = ReadJsonAsync("Databases/Northwind_Modified.mdb.json");
 
-        Database? jsonDatabase = await deserializeJson;
+        MdbJsonDatabase? jsonDatabase = await deserializeJson;
         jsonDatabase.Should().NotBeNull();
+
+        handle.Encoding.CodePage.Should().Be(1252);
 
         int maxThreads = Debugger.IsAttached ? 1 : -1; // When debugger is attached, only run one thread at a time
 
@@ -37,8 +36,10 @@ public class PrelimTests
     public void Test()
     {
         using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
-        Database? jsonDatabase = ReadJson("Databases/Northwind_Modified.mdb.json");
+        MdbJsonDatabase? jsonDatabase = ReadJson("Databases/Northwind_Modified.mdb.json");
         jsonDatabase.Should().NotBeNull();
+
+        handle.Encoding.CodePage.Should().Be(1252);
 
         int maxThreads = Debugger.IsAttached ? 1 : -1; // When debugger is attached, only run one thread at a time
 
@@ -55,7 +56,7 @@ public class PrelimTests
         var table = tableRunInfo.Table;
         var jsonDatabase = tableRunInfo.JsonDatabase;
         jsonDatabase.Tables.Should().ContainKey(table.Name);
-        Table? jsonTable = jsonDatabase.Tables[table.Name];
+        MdbJsonTable? jsonTable = jsonDatabase.Tables[table.Name];
 
         if (jsonTable == null)
         {
@@ -80,13 +81,13 @@ public class PrelimTests
             Debug.WriteLine($"Skipping processing of rows for table {table.Name} since row collection is null in json source.");
             return;
         }
-        var rows = await table.GetRowsAsync(tableRunInfo.Handle, ct).ToListAsync(ct);
+        var rows = await table.GetRowsAsync(ct).ToListAsync(ct);
         rows.Should().HaveCount(jsonTable.Rows.Value.Length);
         int i = 0;
         foreach (var row in rows)
         {
             var jsonRow = jsonTable.Rows.Value[i];
-            foreach (var field in row.Fields)
+            foreach (var field in row.Values)
             {
                 jsonRow.Should().ContainKey(field.Column.Name);
                 JsonElement jv = jsonRow[field.Column.Name];
@@ -96,13 +97,13 @@ public class PrelimTests
                 {
                     switch (field)
                     {
-                        case MdbBoolField boolField:
+                        case MdbBoolValue boolField:
                             boolField.Value.Should().Be(jv.GetBoolean());
                             break;
-                        case MdbByteField byteField:
+                        case MdbByteValue byteField:
                             byteField.Value.Should().Be(jv.GetByte());
                             break;
-                        case MdbByteField.Nullable byteFieldNull:
+                        case MdbByteValue.Nullable byteFieldNull:
                             byteFieldNull.Value.Should().Be(jv.GetByte());
                             break;
                         default:
@@ -121,7 +122,7 @@ public class PrelimTests
         var table = tableRunInfo.Table;
         var jsonDatabase = tableRunInfo.JsonDatabase;
         jsonDatabase.Tables.Should().ContainKey(table.Name);
-        Table? jsonTable = jsonDatabase.Tables[table.Name];
+        MdbJsonTable? jsonTable = jsonDatabase.Tables[table.Name];
 
         if (jsonTable == null)
         {
@@ -146,13 +147,13 @@ public class PrelimTests
             Debug.WriteLine($"Skipping processing of rows for table {table.Name} since row collection is null in json source.");
             return;
         }
-        var rows = table.GetRows(tableRunInfo.Handle).ToList();
+        var rows = table.Rows.ToList();
         rows.Should().HaveCount(jsonTable.Rows.Value.Length);
         int i = 0;
         foreach (var row in rows)
         {
             var jsonRow = jsonTable.Rows.Value[i];
-            foreach (var field in row.Fields)
+            foreach (var field in row.Values)
             {
                 jsonRow.Should().ContainKey(field.Column.Name);
                 JsonElement jv = jsonRow[field.Column.Name];
@@ -162,13 +163,13 @@ public class PrelimTests
                 {
                     switch (field)
                     {
-                        case MdbBoolField boolField:
+                        case MdbBoolValue boolField:
                             boolField.Value.Should().Be(jv.GetBoolean());
                             break;
-                        case MdbByteField byteField:
+                        case MdbByteValue byteField:
                             byteField.Value.Should().Be(jv.GetByte());
                             break;
-                        case MdbByteField.Nullable byteFieldNull:
+                        case MdbByteValue.Nullable byteFieldNull:
                             byteFieldNull.Value.Should().Be(jv.GetByte());
                             break;
                         default:
@@ -182,31 +183,31 @@ public class PrelimTests
         }
     }
 
-    private static async Task<Database?> ReadJsonAsync(string jsonPath)
+    private static async Task<MdbJsonDatabase?> ReadJsonAsync(string jsonPath)
     {
         await using var jsonFile = File.OpenRead(jsonPath);
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            TypeInfoResolver = JsonContext.Default,
+            TypeInfoResolver = MdbJsonContext.Default,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
-        return await JsonSerializer.DeserializeAsync(jsonFile, typeof(Database), options) as Database;
+        return await JsonSerializer.DeserializeAsync(jsonFile, typeof(MdbJsonDatabase), options) as MdbJsonDatabase;
     }
 
-    private static Database? ReadJson(string jsonPath)
+    private static MdbJsonDatabase? ReadJson(string jsonPath)
     {
         using var jsonFile = File.OpenRead(jsonPath);
         var options = new JsonSerializerOptions
         {
             WriteIndented = true,
-            TypeInfoResolver = JsonContext.Default,
+            TypeInfoResolver = MdbJsonContext.Default,
             Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
         };
-        return JsonSerializer.Deserialize(jsonFile, typeof(Database), options) as Database;
+        return JsonSerializer.Deserialize(jsonFile, typeof(MdbJsonDatabase), options) as MdbJsonDatabase;
     }
 
-    private record class TableRunInfo(MdbTable Table, Database JsonDatabase, MdbHandle Handle)
+    private record class TableRunInfo(MdbTable Table, MdbJsonDatabase JsonDatabase, MdbHandle Handle)
     {
     }
 }

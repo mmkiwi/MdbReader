@@ -4,26 +4,27 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using MMKiwi.MdbTools.Fields;
+using MMKiwi.MdbTools.Values;
 using MMKiwi.MdbTools.Mutable;
-
-using System.Buffers.Binary;
 using System.Collections;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
+using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
 
-public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
+internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 {
-    protected Jet3Reader(Encoding encoding)
+    protected Jet3Reader(MdbHeaderInfo db)
     {
-        Encoding = encoding;
+        Encoding = db.Encoding;
+        DbKey = db.DbKey.ByteArrayCompare(new byte[] { 0, 0, 0, 0 }) ? null : db.DbKey;
     }
 
-    Encoding Encoding { get; }
+    public Encoding Encoding { get; }
+    public byte[]? DbKey { get; }
 
     protected abstract Task ReadPartialPageToBufferAsync(int pageNo, Memory<byte> buffer, int start, CancellationToken ct);
 
@@ -55,10 +56,21 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         await ReadPageToBufferAsync(pageNo, buffer, PageType.Data, ct).ConfigureAwait(false);
 
-        ushort rowLocation = BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(10));
+        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(10));
         int mapSize = Constants.PageSize - rowLocation;
 
         return buffer.AsSpan(rowLocation, mapSize).ToArray();
+    }
+
+    protected virtual void DecryptPage(int pageNo, Span<byte> buffer)
+    {
+        if (pageNo == 0 || DbKey is null)
+            return; // not encypted, do nothing
+        byte[] pageKey = new byte[4];
+        MdbBinary.WriteInt32LittleEndian(pageKey, pageNo);
+        for (int i = 0; i < 4; i++)
+            pageKey[i] ^= DbKey[i];
+        RC4.ApplyInPlace(buffer, pageKey);
     }
 
     internal byte[] ReadUsageMap(int mapPtr)
@@ -69,7 +81,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         ReadPageToBuffer(pageNo, buffer, PageType.Data);
 
-        ushort rowLocation = BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(10));
+        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(10));
         int mapSize = Constants.PageSize - rowLocation;
 
         return buffer.AsSpan(rowLocation, mapSize).ToArray();
@@ -115,16 +127,16 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         // This will always be on the first page of the table def
         MdbBuilder.Table table = new(
             firstPage: startPage,
-            numRows: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(4, 4)),
-            nextAutoNum: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(8, 4)),
+            numRows: MdbBinary.ReadInt32LittleEndian(buffer.Slice(4, 4)),
+            nextAutoNum: MdbBinary.ReadInt32LittleEndian(buffer.Slice(8, 4)),
             tableType: (TableType)buffer[12],
-            maxCols: BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(13, 2)),
-            numVarCols: BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(15, 2)),
-            numCols: BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(17, 2)),
-            numIndexes: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(19, 4)),
-            numRealIndexes: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(23, 4)),
-            usedPagesPtr: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(27, 4)),
-            freePagesPtr: BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(31, 4))
+            maxCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(13, 2)),
+            numVarCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(15, 2)),
+            numCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(17, 2)),
+            numIndexes: MdbBinary.ReadInt32LittleEndian(buffer.Slice(19, 4)),
+            numRealIndexes: MdbBinary.ReadInt32LittleEndian(buffer.Slice(23, 4)),
+            usedPagesPtr: MdbBinary.ReadInt32LittleEndian(buffer.Slice(27, 4)),
+            freePagesPtr: MdbBinary.ReadInt32LittleEndian(buffer.Slice(31, 4))
         );
 
         int cursor = 35;
@@ -134,7 +146,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             // second four bytes are the number of index rows (currently unused)
             table.RealIndices[i] = new MdbBuilder.RealIndex
             {
-                NumIndexRows = BinaryPrimitives.ReadInt32LittleEndian(buffer.Slice(cursor + 4, 4))
+                NumIndexRows = MdbBinary.ReadInt32LittleEndian(buffer.Slice(cursor + 4, 4))
             };
             cursor += 8;
         }
@@ -180,7 +192,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     {
         ReadOnlySpan<byte> region = buffer.Slice(cursor, 10);
 
-        ushort colNum = BinaryPrimitives.ReadUInt16LittleEndian(region);
+        ushort colNum = MdbBinary.ReadUInt16LittleEndian(region);
         if (colNum == ushort.MaxValue)
         {
             cursor += 2;
@@ -188,8 +200,8 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         }
         else
         {
-            columns[colNum].UsedPages = BinaryPrimitives.ReadInt32LittleEndian(region[2..]);
-            columns[colNum].FreePages = BinaryPrimitives.ReadInt32LittleEndian(region[6..]);
+            columns[colNum].UsedPages = MdbBinary.ReadInt32LittleEndian(region[2..]);
+            columns[colNum].FreePages = MdbBinary.ReadInt32LittleEndian(region[6..]);
             cursor += 10;
             return true;
         }
@@ -202,15 +214,15 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         return new(encoding)
         {
             Type = (ColumnType)columnEntry[0],
-            NumInclDeleted = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[1..]),
-            OffsetVariable = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[3..]),
-            ColNum = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[5..]),
-            SortOrder = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[7..]),
-            Misc = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[9..]),
+            NumInclDeleted = MdbBinary.ReadUInt16LittleEndian(columnEntry[1..]),
+            OffsetVariable = MdbBinary.ReadUInt16LittleEndian(columnEntry[3..]),
+            ColNum = MdbBinary.ReadUInt16LittleEndian(columnEntry[5..]),
+            SortOrder = MdbBinary.ReadUInt16LittleEndian(columnEntry[7..]),
+            Locale = MdbBinary.ReadUInt16LittleEndian(columnEntry[9..]),
             //skip next 2 bytes
             Flags = (ColumnFlags)columnEntry[13],
-            Offset = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[14..]),
-            Length = BinaryPrimitives.ReadUInt16LittleEndian(columnEntry[16..])
+            OffsetFixed = MdbBinary.ReadUInt16LittleEndian(columnEntry[14..]),
+            Length = MdbBinary.ReadUInt16LittleEndian(columnEntry[16..])
         };
     }
 
@@ -219,11 +231,11 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         ReadOnlySpan<byte> region = buffer.Slice(cursor, 20);
         MdbBuilder.Index index = new()
         {
-            IndexNum = BinaryPrimitives.ReadInt32LittleEndian(region),
-            IndexNum2 = BinaryPrimitives.ReadInt32LittleEndian(region[4..]),
+            IndexNum = MdbBinary.ReadInt32LittleEndian(region),
+            IndexNum2 = MdbBinary.ReadInt32LittleEndian(region[4..]),
             RelTableType = region[8],
-            RlIndexNum = BinaryPrimitives.ReadInt32LittleEndian(region[9..]),
-            RelTablePage = BinaryPrimitives.ReadInt32LittleEndian(region[13..]),
+            RlIndexNum = MdbBinary.ReadInt32LittleEndian(region[9..]),
+            RelTablePage = MdbBinary.ReadInt32LittleEndian(region[13..]),
             CascadeUpdates = region[17] == 1,
             CascadeDeletes = region[18] == 1,
             IndexType = (IndexType)region[19],
@@ -247,12 +259,12 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             realIndex.Columns[i] = new MdbBuilder.RealIndexColumn
             {
-                ColNum = BinaryPrimitives.ReadUInt16LittleEndian(region[(i * 3)..]),
+                ColNum = MdbBinary.ReadUInt16LittleEndian(region[(i * 3)..]),
                 ColOrder = region[i * 3 + 2]
             };
         }
-        realIndex.UsedPages = BinaryPrimitives.ReadInt32LittleEndian(region[30..]);
-        realIndex.FirstDataPointer = BinaryPrimitives.ReadInt32LittleEndian(region[34..]);
+        realIndex.UsedPages = MdbBinary.ReadInt32LittleEndian(region[30..]);
+        realIndex.FirstDataPointer = MdbBinary.ReadInt32LittleEndian(region[34..]);
         realIndex.Flags = region[38];
 
         cursor += 39;
@@ -270,8 +282,8 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         // Bytes 4-7 are the pointer to the next page if the table definiton spans
         // multiple pages.
-        int newNextPage = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(4));
-        int dataLength = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(8));
+        int newNextPage = MdbBinary.ReadInt32LittleEndian(header.AsSpan(4));
+        int dataLength = MdbBinary.ReadInt32LittleEndian(header.AsSpan(8));
 
         if (buffer.Length > 0) // first time around, we won't 
             await ReadPartialPageToBufferAsync(nextPage, buffer[..Math.Min(buffer.Length, Constants.PageSize - 8)], 8, ct).ConfigureAwait(false);
@@ -292,8 +304,8 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         // Bytes 4-7 are the pointer to the next page if the table definiton spans
         // multiple pages.
-        int newNextPage = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(4));
-        int dataLength = BinaryPrimitives.ReadInt32LittleEndian(header.AsSpan(8));
+        int newNextPage = MdbBinary.ReadInt32LittleEndian(header.AsSpan(4));
+        int dataLength = MdbBinary.ReadInt32LittleEndian(header.AsSpan(8));
 
         if (buffer.Length > 0) // first time around, we won't 
             ReadPartialPageToBuffer(nextPage, buffer[..Math.Min(buffer.Length, Constants.PageSize - 8)], 8);
@@ -304,7 +316,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     {
         if (map[0] == 0) // Type 0 usage map
         {
-            int pageStart = BinaryPrimitives.ReadInt32LittleEndian(map.AsSpan(1));
+            int pageStart = MdbBinary.ReadInt32LittleEndian(map.AsSpan(1));
             BitArray usageBitmap = new(map[5..]);
             for (int j = startPage > pageStart ? startPage - pageStart + 1 : 0; j < usageBitmap.Length; j++)
                 if (usageBitmap[j])
@@ -317,7 +329,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             int maxPages = (map.Length - 1) / 4;
             for (int i = (startPage + 1) / Constants.UsageMapLen; i < maxPages; i++)
             {
-                int mapPage = BinaryPrimitives.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
+                int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[Constants.PageSize];
@@ -337,7 +349,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     {
         if (map[0] == 0) // Type 0 usage map
         {
-            int pageStart = BinaryPrimitives.ReadInt32LittleEndian(map.AsSpan(1));
+            int pageStart = MdbBinary.ReadInt32LittleEndian(map.AsSpan(1));
             BitArray usageBitmap = new(map[5..]);
             for (int j = startPage > pageStart ? startPage - pageStart + 1 : 0; j < usageBitmap.Length; j++)
                 if (usageBitmap[j])
@@ -350,7 +362,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             int maxPages = (map.Length - 1) / 4;
             for (int i = (startPage + 1) / Constants.UsageMapLen; i < maxPages; i++)
             {
-                int mapPage = BinaryPrimitives.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
+                int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[Constants.PageSize];
@@ -366,7 +378,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         throw new FormatException();
     }
 
-    internal async IAsyncEnumerable<List<IMdbField>> ReadDataPageAsync(int page, MdbTable table, HashSet<string> columnsToTake, [EnumeratorCancellation] CancellationToken ct)
+    internal async IAsyncEnumerable<List<IMdbValue>> ReadDataPageAsync(int page, MdbTable table, HashSet<string> columnsToTake, [EnumeratorCancellation] CancellationToken ct)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -389,7 +401,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         await ReadPageToBufferAsync(page, buffer, PageType.Data, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
-        ushort numRows = BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(8));
+        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
 
         var rowOffsets = GetRowOffsets(numRows, buffer);
 
@@ -397,14 +409,14 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             if (rowOffset.IsDeleted)
                 continue;
-            else if (rowOffset.IsLookup)
-                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
-            else
-                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
+            
+            yield return rowOffset.IsLookup 
+                ? CrackRow(table, rowOffset, buffer, columnsToTake) 
+                : CrackRow(table, rowOffset, buffer, columnsToTake);
         }
     }
 
-    internal IEnumerable<List<IMdbField>> ReadDataPage(int page, MdbTable table, HashSet<string> columnsToTake)
+    internal IEnumerable<List<IMdbValue>> ReadDataPage(int page, MdbTable table, HashSet<string> columnsToTake)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -427,7 +439,7 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         ReadPageToBuffer(page, buffer, PageType.Data);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
-        ushort numRows = BinaryPrimitives.ReadUInt16LittleEndian(buffer.AsSpan(8));
+        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
 
         var rowOffsets = GetRowOffsets(numRows, buffer);
 
@@ -435,16 +447,15 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             if (rowOffset.IsDeleted)
                 continue;
-            else if (rowOffset.IsLookup)
-                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
-            else
-                yield return CrackRow(table, rowOffset, buffer, columnsToTake);
+            yield return rowOffset.IsLookup 
+                ? CrackRow(table, rowOffset, buffer, columnsToTake) 
+                : CrackRow(table, rowOffset, buffer, columnsToTake);
         }
     }
 
-    private List<IMdbField> CrackRow(MdbTable table, RowOffset row, ReadOnlySpan<byte> buffer, HashSet<string> columnsToTake)
+    private List<IMdbValue> CrackRow(MdbTable table, RowOffset row, ReadOnlySpan<byte> buffer, HashSet<string> columnsToTake)
     {
-        List<IMdbField> fields = new(table.Columns.Length);
+        List<IMdbValue> fields = new(table.Columns.Length);
         ReadOnlySpan<byte> region = buffer[row.StartOffset..row.EndOffset];
 
         byte numFixedCols = region[0];
@@ -477,11 +488,11 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         return fields;
     }
 
-    private IMdbField ProcessRow(ReadOnlySpan<byte> region, byte numFixedCols, bool isNull, byte numVarCols, int[] varColOffsets, ref int fixedColsFound, MdbColumn column)
+    private IMdbValue ProcessRow(ReadOnlySpan<byte> region, byte numFixedCols, bool isNull, byte numVarCols, int[] varColOffsets, ref int fixedColsFound, MdbColumn column)
     {
         if (column.Flags.HasFlag(ColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
         {
-            var field = MdbFieldFactory.CreateField(this, column, isNull, region.Slice(column.Offset + 1, column.Length).ToImmutableArray());
+            var field = MdbValueFactory.CreateValue(this, column, isNull, region.Slice(column.OffsetFixed + 1, column.Length).ToImmutableArray());
             fixedColsFound++;
             return field;
         }
@@ -489,32 +500,10 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             var startOffset = varColOffsets[column.OffsetVariable];
             var endOffset = varColOffsets[column.OffsetVariable + 1];
-            return MdbFieldFactory.CreateField(this, column, isNull, region[startOffset..endOffset].ToImmutableArray());
+            return MdbValueFactory.CreateValue(this, column, isNull, region[startOffset..endOffset].ToImmutableArray());
 
         }
-        return MdbFieldFactory.CreateField(this, column, true, ImmutableArray<byte>.Empty);
-    }
-
-    private ImmutableArray<byte> ReadRowFromLvalPage(int pageNo, int rowNo)
-    {
-        Span<byte> buffer = new byte[Constants.PageSize];
-
-        ReadPageToBuffer(pageNo, buffer, PageType.Data);
-
-        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
-            throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
-
-        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
-
-        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
-
-        int length = nextStart - start & Constants.OffsetMask;
-        int startOffset = start & Constants.OffsetMask;
-
-        if (startOffset > Constants.PageSize || startOffset > nextStart || nextStart > Constants.PageSize)
-            throw new FormatException($"Error reading long value (page {pageNo}, row {rowNo})");
-
-        return buffer.Slice(startOffset, length).ToImmutableArray();
+        return MdbValueFactory.CreateValue(this, column, true, ImmutableArray<byte>.Empty);
     }
 
     private int ReadRowFromLvalPage(int pageNo, int rowNo, Span<byte> oleBuffer)
@@ -525,9 +514,9 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
             throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
 
-        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
+        int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
 
-        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
+        int nextStart = rowNo == 0 ? Constants.PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
 
         int length = nextStart - start & Constants.OffsetMask;
         int startOffset = start & Constants.OffsetMask;
@@ -547,15 +536,15 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
             throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
 
-        int start = BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
+        int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
 
-        int nextStart = rowNo == 0 ? Constants.PageSize : BinaryPrimitives.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
+        int nextStart = rowNo == 0 ? Constants.PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Constants.RowCountOffset + rowNo * 2, 2));
 
         int length = nextStart - start & Constants.OffsetMask;
         int startOffset = start & Constants.OffsetMask;
 
         ReadOnlySpan<byte> recordBuffer = buffer.Slice(startOffset, length);
-        int nextPage = BinaryPrimitives.ReadInt32LittleEndian(recordBuffer);
+        int nextPage = MdbBinary.ReadInt32LittleEndian(recordBuffer);
         if (startOffset > Constants.PageSize || startOffset > nextStart || nextStart > Constants.PageSize)
             throw new FormatException($"Error reading long value (page {pageNo}, row {rowNo})");
 
@@ -601,20 +590,21 @@ public abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         RowOffset[] rowOffsets = new RowOffset[numRows];
         for (int i = 0; i < numRows; i++)
         {
-            ushort offset = BinaryPrimitives.ReadUInt16LittleEndian(region[(i * 2)..]);
+            ushort offset = MdbBinary.ReadUInt16LittleEndian(region[(i * 2)..]);
             rowOffsets[i].StartOffset = unchecked((ushort)(
                                        offset & 0b0001_1111_1111_1111));
             rowOffsets[i].IsLookup = (offset & 0b1000_0000_0000_0000) > 0;
             rowOffsets[i].IsDeleted = (offset & 0b0100_0000_0000_0000) > 0;
 
-            if (i == 0) // First row ends at the end of the page
-                rowOffsets[i].EndOffset = Constants.PageSize;
-            else // All other rows end at the start of the previous row
-                rowOffsets[i].EndOffset = rowOffsets[i - 1].StartOffset;
+            rowOffsets[i].EndOffset = i == 0 
+                ? Constants.PageSize 
+                : rowOffsets[i - 1].StartOffset;
         }
 
         return rowOffsets;
     }
+
+    public bool IsDisposed { get; protected set; }
 
     public abstract void Dispose();
     public abstract ValueTask DisposeAsync();

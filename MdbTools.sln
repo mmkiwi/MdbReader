@@ -9,6 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MdbTools", "src\MdbTools\Md
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MdbToolsTests", "test\MdbToolsTests\MdbToolsTests.csproj", "{C9071C68-9746-4C93-8892-8B72C24941CE}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{0AF0CA7C-02A8-488E-8361-54C17EE73DD0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MdbCreateJson", "test\MdbCreateJson\MdbCreateJson.csproj", "{548B7889-8736-474D-B127-65ED283FF750}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,12 +27,17 @@ Global
 		{C9071C68-9746-4C93-8892-8B72C24941CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C9071C68-9746-4C93-8892-8B72C24941CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C9071C68-9746-4C93-8892-8B72C24941CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{548B7889-8736-474D-B127-65ED283FF750}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{548B7889-8736-474D-B127-65ED283FF750}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{548B7889-8736-474D-B127-65ED283FF750}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{548B7889-8736-474D-B127-65ED283FF750}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{9C48D4A3-50C6-439C-B8C6-0379E60AB979} = {934FEB2E-D4AA-45C7-8D82-31C6CE03A139}
+		{548B7889-8736-474D-B127-65ED283FF750} = {0AF0CA7C-02A8-488E-8361-54C17EE73DD0}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1956DF4B-B02E-4AD1-A7BD-983CE3979CD6}

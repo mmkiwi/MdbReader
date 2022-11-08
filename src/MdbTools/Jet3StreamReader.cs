@@ -4,16 +4,16 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Text;
+using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
 
-public class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
+internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
 
     private readonly object _lock = new();
 
-    public Jet3StreamReader(Stream mdbStream, Encoding encoding, bool disableAsyncForThreadSafety) : base(encoding)
+    public Jet3StreamReader(Stream mdbStream, MdbHeaderInfo db, bool disableAsyncForThreadSafety) : base(db)
     {
         MdbStream = mdbStream;
         DisableAsync = disableAsyncForThreadSafety;
@@ -24,18 +24,13 @@ public class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 
     protected override async Task ReadPartialPageToBufferAsync(int pageNo, Memory<byte> buffer, int start, CancellationToken ct)
     {
-        if(DisableAsync)
-        lock (_lock)
-        {
-            // Can't do thread safety with async because you run into a race condition between the seek and the read.
-            // So just running synchronously :(
-            MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
-            MdbStream.Read(buffer.Span);
-        }
+        if (DisableAsync)
+            ReadPartialPageToBuffer(pageNo, buffer.Span, start);
         else
         {
             MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
-            await MdbStream.ReadAsync(buffer).ConfigureAwait(false);
+            await MdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
+            DecryptPage(pageNo, buffer.Span);
         }
     }
 
@@ -45,9 +40,18 @@ public class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
         {
             MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
             MdbStream.Read(buffer);
+            DecryptPage(pageNo, buffer);
         }
     }
 
-    public override ValueTask DisposeAsync() => MdbStream.DisposeAsync();
-    public override void Dispose() => MdbStream.Dispose();
+    public override async ValueTask DisposeAsync()
+    {
+        IsDisposed = true;
+        await MdbStream.DisposeAsync().ConfigureAwait(false);
+    }
+    public override void Dispose()
+    {
+        IsDisposed = true;
+        MdbStream.Dispose();
+    }
 }

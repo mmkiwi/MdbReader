@@ -5,9 +5,15 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 namespace MMKiwi.MdbTools.Mutable;
-
-public static partial class MdbBuilder
+/// <summary>
+/// /// A container class for mutable builders for the publicly visiable, immutable Mdb obejects
+/// </summary>
+internal static partial class MdbBuilder
 {
+    /// <summary>
+    /// The mutable builder for a <see cref="MdbTable" /> class.
+    /// </summary>
+
     internal class Table
     {
         public Table(int numRows, int nextAutoNum, TableType tableType, ushort maxCols, ushort numVarCols, ushort numCols, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage)
