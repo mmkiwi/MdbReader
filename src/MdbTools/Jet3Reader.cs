@@ -20,7 +20,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     protected Jet3Reader(MdbHeaderInfo db)
     {
         Encoding = db.Encoding;
-        DbKey = db.DbKey.ByteArrayCompare(new byte[] { 0, 0, 0, 0 }) ? null : db.DbKey;
+        DbKey = db.DbKey.AsSpan().SequenceEqual(new byte[] { 0, 0, 0, 0 }) ? null : db.DbKey;
     }
 
     public Encoding Encoding { get; }
@@ -30,7 +30,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     protected abstract void ReadPartialPageToBuffer(int pageNo, Span<byte> buffer, int start);
 
-    protected async Task ReadPageToBufferAsync(int pageNo, Memory<byte> buffer, PageType pageType, CancellationToken ct)
+    protected async Task ReadPageToBufferAsync(int pageNo, Memory<byte> buffer, MdbPageType pageType, CancellationToken ct)
     {
         await ReadPartialPageToBufferAsync(pageNo, buffer, 0, ct).ConfigureAwait(false);
 
@@ -39,7 +39,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             throw new FormatException($"Incorrect page type on page {pageNo}. (Expected {(byte)pageType}, observed {header})");
     }
 
-    protected void ReadPageToBuffer(int pageNo, Span<byte> buffer, PageType pageType)
+    protected void ReadPageToBuffer(int pageNo, Span<byte> buffer, MdbPageType pageType)
     {
         ReadPartialPageToBuffer(pageNo, buffer, 0);
 
@@ -54,7 +54,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         byte[] buffer = new byte[Constants.PageSize];
 
-        await ReadPageToBufferAsync(pageNo, buffer, PageType.Data, ct).ConfigureAwait(false);
+        await ReadPageToBufferAsync(pageNo, buffer, MdbPageType.Data, ct).ConfigureAwait(false);
 
         ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(10));
         int mapSize = Constants.PageSize - rowLocation;
@@ -79,7 +79,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         byte[] buffer = new byte[Constants.PageSize];
 
-        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+        ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
         ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(10));
         int mapSize = Constants.PageSize - rowLocation;
@@ -129,7 +129,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             firstPage: startPage,
             numRows: MdbBinary.ReadInt32LittleEndian(buffer.Slice(4, 4)),
             nextAutoNum: MdbBinary.ReadInt32LittleEndian(buffer.Slice(8, 4)),
-            tableType: (TableType)buffer[12],
+            tableType: (MdbTableType)buffer[12],
             maxCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(13, 2)),
             numVarCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(15, 2)),
             numCols: MdbBinary.ReadUInt16LittleEndian(buffer.Slice(17, 2)),
@@ -213,14 +213,14 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         cursor += 18;
         return new(encoding)
         {
-            Type = (ColumnType)columnEntry[0],
+            Type = (MdbColumnType)columnEntry[0],
             NumInclDeleted = MdbBinary.ReadUInt16LittleEndian(columnEntry[1..]),
             OffsetVariable = MdbBinary.ReadUInt16LittleEndian(columnEntry[3..]),
             ColNum = MdbBinary.ReadUInt16LittleEndian(columnEntry[5..]),
             SortOrder = MdbBinary.ReadUInt16LittleEndian(columnEntry[7..]),
             Locale = MdbBinary.ReadUInt16LittleEndian(columnEntry[9..]),
             //skip next 2 bytes
-            Flags = (ColumnFlags)columnEntry[13],
+            Flags = (MdbColumnFlags)columnEntry[13],
             OffsetFixed = MdbBinary.ReadUInt16LittleEndian(columnEntry[14..]),
             Length = MdbBinary.ReadUInt16LittleEndian(columnEntry[16..])
         };
@@ -238,7 +238,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             RelTablePage = MdbBinary.ReadInt32LittleEndian(region[13..]),
             CascadeUpdates = region[17] == 1,
             CascadeDeletes = region[18] == 1,
-            IndexType = (IndexType)region[19],
+            IndexType = (MdbIndexType)region[19],
         };
         cursor += 20;
         return index;
@@ -272,12 +272,12 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     private async Task<(int nextPage, int dataLength)> ReadNextTablePageAsync(int nextPage, Memory<byte> buffer, CancellationToken ct)
     {
         byte[] header = new byte[16];
-        await ReadPageToBufferAsync(nextPage, header, PageType.TableDefinition, ct).ConfigureAwait(false);
+        await ReadPageToBufferAsync(nextPage, header, MdbPageType.TableDefinition, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
         // Skip the second byte
         // Third and fourth bytes is the word "VC"
-        if (!header.AsSpan(2, 2).ByteArrayCompare(Constants.TableDef.TDefId))
+        if (!header.AsSpan(2, 2).SequenceEqual(Constants.TableDef.TDefId))
             throw new FormatException("Invalid JET3 table (missing 'VC' in header)");
 
         // Bytes 4-7 are the pointer to the next page if the table definiton spans
@@ -294,12 +294,12 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     private (int nextPage, int dataLength) ReadNextTablePage(int nextPage, Span<byte> buffer)
     {
         byte[] header = new byte[16];
-        ReadPageToBuffer(nextPage, header, PageType.TableDefinition);
+        ReadPageToBuffer(nextPage, header, MdbPageType.TableDefinition);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
         // Skip the second byte
         // Third and fourth bytes is the word "VC"
-        if (!header.AsSpan(2, 2).ByteArrayCompare(Constants.TableDef.TDefId))
+        if (!header.AsSpan(2, 2).SequenceEqual(Constants.TableDef.TDefId))
             throw new FormatException("Invalid JET3 table (missing 'VC' in header)");
 
         // Bytes 4-7 are the pointer to the next page if the table definiton spans
@@ -333,7 +333,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[Constants.PageSize];
-                await ReadPageToBufferAsync(mapPage, buffer, PageType.PageUseageBitmap, ct).ConfigureAwait(false);
+                await ReadPageToBufferAsync(mapPage, buffer, MdbPageType.PageUseageBitmap, ct).ConfigureAwait(false);
 
                 BitArray usageBitmap = new(buffer[4..]);
                 for (int j = startPage + 1; j < usageBitmap.Length; j++)
@@ -366,7 +366,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[Constants.PageSize];
-                ReadPageToBuffer(mapPage, buffer, PageType.PageUseageBitmap);
+                ReadPageToBuffer(mapPage, buffer, MdbPageType.PageUseageBitmap);
 
                 BitArray usageBitmap = new(buffer[4..]);
                 for (int j = startPage + 1; j < usageBitmap.Length; j++)
@@ -398,7 +398,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         byte[] buffer = new byte[Constants.PageSize];
 
-        await ReadPageToBufferAsync(page, buffer, PageType.Data, ct).ConfigureAwait(false);
+        await ReadPageToBufferAsync(page, buffer, MdbPageType.Data, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
         ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
@@ -436,7 +436,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         byte[] buffer = new byte[Constants.PageSize];
 
-        ReadPageToBuffer(page, buffer, PageType.Data);
+        ReadPageToBuffer(page, buffer, MdbPageType.Data);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
         ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
@@ -490,13 +490,13 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     private IMdbValue ProcessRow(ReadOnlySpan<byte> region, byte numFixedCols, bool isNull, byte numVarCols, int[] varColOffsets, ref int fixedColsFound, MdbColumn column)
     {
-        if (column.Flags.HasFlag(ColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
+        if (column.Flags.HasFlag(MdbColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
         {
             var field = MdbValueFactory.CreateValue(this, column, isNull, region.Slice(column.OffsetFixed + 1, column.Length).ToImmutableArray());
             fixedColsFound++;
             return field;
         }
-        else if (!column.Flags.HasFlag(ColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
+        else if (!column.Flags.HasFlag(MdbColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
         {
             var startOffset = varColOffsets[column.OffsetVariable];
             var endOffset = varColOffsets[column.OffsetVariable + 1];
@@ -509,9 +509,9 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     private int ReadRowFromLvalPage(int pageNo, int rowNo, Span<byte> oleBuffer)
     {
         Span<byte> buffer = new byte[Constants.PageSize];
-        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+        ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
-        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
+        if (!buffer.Slice(4, 4).SequenceEqual(Constants.LvalString))
             throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
 
         int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
@@ -531,9 +531,9 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     private (int numRead, int nextPage) ReadRowFromLvalPage2(int pageNo, int rowNo, Span<byte> oleBuffer)
     {
         Span<byte> buffer = new byte[Constants.PageSize];
-        ReadPageToBuffer(pageNo, buffer, PageType.Data);
+        ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
-        if (!buffer.Slice(4, 4).ByteArrayCompare(Constants.LvalString))
+        if (!buffer.Slice(4, 4).SequenceEqual(Constants.LvalString))
             throw new FormatException($"Error trying to read LVAL page {pageNo}. (Expected \"LVAL\" at byte 4)");
 
         int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Constants.RowCountOffset + rowNo * 2, 2));
@@ -630,5 +630,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             public const byte Header = 0x02;
             public static ReadOnlySpan<byte> TDefId => "VC"u8;
         }
+
+        public static ReadOnlySpan<byte> JetHeader => "\0\u0001\0\0Standard Jet DB"u8;
     }
 }

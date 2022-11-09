@@ -22,13 +22,13 @@ internal static partial class MdbBuilder
         {
             Encoding = encoding;
         }
-        public ColumnType Type { get; set; }
+        public MdbColumnType Type { get; set; }
         public ushort NumInclDeleted { get; set; }
         public ushort OffsetVariable { get; set; }
         public ushort ColNum { get; set; }
         public ushort SortOrder { get; set; }
         public ushort Locale { get; set; }
-        public ColumnFlags Flags { get; set; }
+        public MdbColumnFlags Flags { get; set; }
         public ushort OffsetFixed { get; set; }
         public ushort Length { get; set; }
         public string? Name { get; set; }

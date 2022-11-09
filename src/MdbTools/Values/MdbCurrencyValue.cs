@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Currency"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Currency"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,10 +28,10 @@ public sealed class MdbCurrencyValue : MdbValue<decimal>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 8, 8, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Currency" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Currency" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Currency;
+    public static MdbColumnType AllowableType => MdbColumnType.Currency;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="decimal" />.
@@ -39,7 +39,7 @@ public sealed class MdbCurrencyValue : MdbValue<decimal>, IValueAllowableType
     public override decimal Value => ConversionFunctions.AsCurrency(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Currency"/>. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Currency"/>. 
     /// </summary>
     /// <remarks>
     /// <para>

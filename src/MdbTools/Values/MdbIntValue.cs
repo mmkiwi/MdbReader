@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Int"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Int"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,10 +27,10 @@ public sealed class MdbIntValue : MdbValue<short>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 2, 2, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Int" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Int" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Int;
+    public static MdbColumnType AllowableType => MdbColumnType.Int;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="short" /> (values from -32768 to 32767).
@@ -38,7 +38,7 @@ public sealed class MdbIntValue : MdbValue<short>, IValueAllowableType
     public override short Value => ConversionFunctions.AsShort(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Int" />. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Int" />. 
     /// Referred to in the Access GUI as a Number column with the Integer size, and as an <c>INT</c> in SQL.
     /// </summary>
     /// <remarks>

@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Guid"/>.
+/// A database value corresponding to an Access <see cref="MdbColumnType.Guid"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -25,10 +25,10 @@ public sealed class MdbGuidValue : MdbValue<Guid>, IValueAllowableType
     internal MdbGuidValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
         : base(column, isNull, binaryValue, false, 16, 16, AllowableType) { }
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Guid" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Guid" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Guid;
+    public static MdbColumnType AllowableType => MdbColumnType.Guid;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="Guid" />
@@ -36,7 +36,7 @@ public sealed class MdbGuidValue : MdbValue<Guid>, IValueAllowableType
     public override Guid Value => ConversionFunctions.AsGuid(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Guid"/>.
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Guid"/>.
     /// </summary>
     /// <remarks>
     /// <para>

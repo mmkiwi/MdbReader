@@ -66,7 +66,7 @@ public sealed record class MdbTable
     /// <summary>
     /// The type of the table
     /// </summary>
-    public TableType TableType { get; }
+    public MdbTableType TableType { get; }
 
     /// <summary>
     /// Maximum number of columns a row will have (includes deleted columns)

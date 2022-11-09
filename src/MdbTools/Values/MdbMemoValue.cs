@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Memo"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Memo"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,8 +37,8 @@ public class MdbMemoValue : MdbLongValField<StreamReader?>, IValueAllowableType
     public override StreamReader? Value => IsNull ? null : new StreamReader(new MdbLValStream(new Jet3Reader.LvalStream(Reader, Column, BinaryValue)), Column.Encoding);
     
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Memo" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Memo" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Memo;
+    public static MdbColumnType AllowableType => MdbColumnType.Memo;
 }

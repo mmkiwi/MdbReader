@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace MMKiwi.MdbTools.Tests.Model;
+namespace MMKiwi.MdbTools.MdbCreateJson.Model;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(MdbJsonDatabase))]

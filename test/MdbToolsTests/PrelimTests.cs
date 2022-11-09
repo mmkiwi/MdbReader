@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 using FluentAssertions;
 
 using MMKiwi.MdbTools.Values;
-using MMKiwi.MdbTools.Tests.Model;
+using MMKiwi.MdbTools.MdbCreateJson.Model;
 
 namespace MMKiwi.MdbTools.Tests;
 

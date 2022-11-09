@@ -35,7 +35,7 @@ public sealed record class MdbColumn
     /// <summary>
     /// The data type of the column.
     /// </summary>
-    public ColumnType Type { get; }
+    public MdbColumnType Type { get; }
 
     /// <summary>
     /// The index of the column (including deleted columns)
@@ -64,7 +64,7 @@ public sealed record class MdbColumn
     /// <summary>
     /// The flags set on the column. Use <see cref="Enum.HasFlag(Enum)" /> to see if the flag is set.
     /// </summary>
-    public ColumnFlags Flags { get; }
+    public MdbColumnFlags Flags { get; }
 
     /// <summary>
     /// The offset for the fixed-length columns
@@ -73,7 +73,7 @@ public sealed record class MdbColumn
 
     /// <summary>
     /// The length of the column for fixed-length columns, or the max length for variable-length columns. For long
-    /// columns (<see cref="ColumnType.Memo" /> or <see cref="ColumnType.OLE" />), the length is zero.
+    /// columns (<see cref="MdbColumnType.Memo" /> or <see cref="MdbColumnType.OLE" />), the length is zero.
     /// </summary>
     public ushort Length { get; }
 

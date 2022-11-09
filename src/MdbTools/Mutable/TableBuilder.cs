@@ -16,7 +16,7 @@ internal static partial class MdbBuilder
 
     internal class Table
     {
-        public Table(int numRows, int nextAutoNum, TableType tableType, ushort maxCols, ushort numVarCols, ushort numCols, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage)
+        public Table(int numRows, int nextAutoNum, MdbTableType tableType, ushort maxCols, ushort numVarCols, ushort numCols, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage)
         {
             NumRows = numRows;
             NextAutoNum = nextAutoNum;
@@ -37,7 +37,7 @@ internal static partial class MdbBuilder
 
         public int NumRows { get; set; }
         public int NextAutoNum { get; set; }
-        public TableType TableType { get; set; }
+        public MdbTableType TableType { get; set; }
         public ushort MaxCols { get; set; }
         public ushort NumVarCols { get; set; }
         public ushort NumCols { get; set; }

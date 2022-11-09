@@ -22,7 +22,7 @@ internal static partial class MdbBuilder
         public int RelTablePage { get; set; }
         public bool CascadeUpdates { get; set; }
         public bool CascadeDeletes { get; set; }
-        public IndexType IndexType { get; set; }
+        public MdbIndexType IndexType { get; set; }
         public string? Name { get; set; }
     }
 }

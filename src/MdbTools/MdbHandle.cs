@@ -93,9 +93,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         mdbFileStream.Seek(0, SeekOrigin.Begin);
         mdbFileStream.Read(header);
 
-        var jetHeader = "\0\u0001\0\0Standard Jet DB"u8;
-
-        if (!header.AsSpan(0, jetHeader.Length).ByteArrayCompare(jetHeader))
+        if (!header.AsSpan(0, Jet3Reader.Constants.JetHeader.Length).SequenceEqual(Jet3Reader.Constants.JetHeader))
             throw new InvalidDataException("File is not JET database");
 
         byte jetVersion = header[0x14];

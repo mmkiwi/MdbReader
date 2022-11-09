@@ -9,12 +9,12 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Binary" />. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Binary" />. 
 /// </summary>
 /// <remarks>
 /// <para>
 ///   This is a byte array with up to <see cref="MdbColumn.Length" /> bytes. 
-///   Note that if <see cref="ColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
+///   Note that if <see cref="MdbColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
 ///   there may be null bytes appended to the end in order to reach the fixed length. 
 ///   These columns can't be created in the Access GUI. They have the type VARBINARY or BINARY in 
 ///   SQL.
@@ -29,28 +29,28 @@ public sealed class MdbBinaryValue : MdbValue<ImmutableArray<byte>>, IValueAllow
         : base(column, isNull, binaryValue, false, 0, column.Length, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Binary" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Binary" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Binary;
+    public static MdbColumnType AllowableType => MdbColumnType.Binary;
 
     /// <summary>
     /// The value for the specific row and column as a byte array.
     /// </summary>
     /// <remarks>
     /// This is a byte array with up to <see cref="MdbColumn.Length" /> bytes. 
-    /// Note that if <see cref="ColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
+    /// Note that if <see cref="MdbColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
     /// there may be null bytes appended to the end in order to reach the fixed length.
     /// </remarks>
     public override ImmutableArray<byte> Value => BinaryValue;
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Binary" />. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Binary" />. 
     /// </summary>
     /// <remarks>
     /// <para>
     ///   This is a byte array with up to <see cref="MdbColumn.Length" /> bytes. 
-    ///   Note that if <see cref="ColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
+    ///   Note that if <see cref="MdbColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
     ///   there may be null bytes appended to the end in order to reach the fixed length. 
     ///   These columns can't be created in the Access GUI. They have the type VARBINARY or BINARY in 
     ///   SQL.

@@ -9,7 +9,7 @@ namespace MMKiwi.MdbTools.Values;
 #if NET7_0_OR_GREATER
 /// <summary>
 /// This interface defined the static <see cref="AllowableType" /> property which specifies which
-/// <see cref="ColumnType">ColumnTypes</see> are allowed for a given <see cref="IMdbValue"/>
+/// <see cref="MdbColumnType">ColumnTypes</see> are allowed for a given <see cref="IMdbValue"/>
 /// </summary>
 /// <remarks>
 /// This interface does nothing in .NET versions prior to 7 since those versions do not support
@@ -25,9 +25,9 @@ public interface IValueAllowableType
 {
 #if NET7_0_OR_GREATER
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this
+    /// The <see cref="MdbColumnType" /> that can be used for this
     /// <see cref="MdbValue{T}" />
     /// </summary>
-    static abstract ColumnType AllowableType { get; }
+    static abstract MdbColumnType AllowableType { get; }
 #endif
 }

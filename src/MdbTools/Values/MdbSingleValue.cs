@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Single"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Single"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,10 +26,10 @@ public sealed class MdbSingleValue : MdbValue<float>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 4, 4, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Single" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Single" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Single;
+    public static MdbColumnType AllowableType => MdbColumnType.Single;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="float" />.
@@ -37,7 +37,7 @@ public sealed class MdbSingleValue : MdbValue<float>, IValueAllowableType
     public override float Value => ConversionFunctions.AsSingle(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Single"/>. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Single"/>. 
     /// </summary>
     /// <remarks>
     /// <para>

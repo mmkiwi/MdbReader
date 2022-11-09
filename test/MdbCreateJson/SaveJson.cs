@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 using MMKiwi.MdbTools;
 using MMKiwi.MdbTools.Values;
-using MMKiwi.MdbTools.Tests.Model;
+using MMKiwi.MdbTools.MdbCreateJson.Model;
 
 using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
 
@@ -14,7 +14,7 @@ foreach (var table in handle.Tables)
 {
     try
     {
-        Dictionary<string, ColumnType> outColumns = new(table.Columns.Length);
+        Dictionary<string, MdbColumnType> outColumns = new(table.Columns.Length);
         foreach (var column in table.Columns)
         {
             outColumns[column.Name] = column.Type;

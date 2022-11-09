@@ -9,7 +9,7 @@ namespace MMKiwi.MdbTools;
 /// <summary>
 /// Whether a table is a user-visible table or a system table
 /// </summary>
-public enum TableType : byte
+public enum MdbTableType : byte
 {
     /// <summary>
     /// User-visible table
@@ -24,7 +24,7 @@ public enum TableType : byte
 /// <summary>
 /// The type of a column in an Access database
 /// </summary>
-public enum ColumnType : byte
+public enum MdbColumnType : byte
 {
     /// <summary>
     /// A one-bit yes or no column
@@ -147,7 +147,7 @@ public enum ColumnType : byte
 /// See <a href="https://github.com/mdbtools/mdbtools/blob/dev/HACKING.md#data-pages">https://github.com/mdbtools/mdbtools/blob/dev/HACKING.md#data-pages</a>
 /// for more information on the page formats.
 /// </remarks>
-internal enum PageType : byte
+internal enum MdbPageType : byte
 {
     DatabaseDefinition = 0x00,
     Data = 0x01,
@@ -162,7 +162,7 @@ internal enum PageType : byte
 /// Flags that can be set on a given column
 /// </summary>
 [Flags]
-public enum ColumnFlags : byte
+public enum MdbColumnFlags : byte
 {
     /// <summary>
     /// The column is a fixed length. (Set for all simple numeric values)
@@ -198,7 +198,7 @@ public enum ColumnFlags : byte
 /// <summary>
 /// The type of an index
 /// </summary>
-internal enum IndexType : byte
+internal enum MdbIndexType : byte
 {
     /// <summary>
     /// A primary key index
@@ -219,7 +219,7 @@ internal enum IndexType : byte
 /// For more information
 /// </remarks>
 [Flags]
-internal enum LVALType : byte
+internal enum MdbLvalType : byte
 {
     /// <summary>The value is inline in the table (generally short values)</summary>
     Inline = 0x80,

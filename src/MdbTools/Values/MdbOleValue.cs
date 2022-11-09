@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.OLE"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.OLE"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,8 +33,8 @@ public class MdbOleValue : MdbLongValField<MdbLValStream?>, IValueAllowableType
     public override MdbLValStream? Value => IsNull ? null : new MdbLValStream(new Jet3Reader.LvalStream(Reader, Column, BinaryValue));
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.OLE" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.OLE" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.OLE;
+    public static MdbColumnType AllowableType => MdbColumnType.OLE;
 }

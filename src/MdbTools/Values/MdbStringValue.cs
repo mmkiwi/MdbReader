@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Text"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Text"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,10 +37,10 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
     }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Text" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Text" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Text;
+    public static MdbColumnType AllowableType => MdbColumnType.Text;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="string" />.
@@ -73,7 +73,7 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
     public ImmutableArray<byte> RawValue => BinaryValue;
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Text"/>. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Text"/>. 
     /// </summary>
     /// <remarks>
     /// <para>

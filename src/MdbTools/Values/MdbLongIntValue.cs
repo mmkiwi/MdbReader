@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.LongInt"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.LongInt"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,10 +27,10 @@ public sealed class MdbLongIntValue : MdbValue<int>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 4, 4, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.LongInt" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.LongInt" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.LongInt;
+    public static MdbColumnType AllowableType => MdbColumnType.LongInt;
 
     /// <summary>
     /// The value for the specific row and column. An <see cref="int" />
@@ -38,7 +38,7 @@ public sealed class MdbLongIntValue : MdbValue<int>, IValueAllowableType
     public override int Value => ConversionFunctions.AsInt(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.LongInt"/>. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.LongInt"/>. 
     /// </summary>
     /// <remarks>
     /// <para>

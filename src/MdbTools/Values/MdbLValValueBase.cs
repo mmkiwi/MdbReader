@@ -17,8 +17,8 @@ namespace MMKiwi.MdbTools.Values;
 /// </typeparam>
 public abstract class MdbLongValField<TOut> : MdbValue<TOut>
 {
-    private protected MdbLongValField(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, ColumnType allowableType)
-        : base(column, isNull, binaryValue, column.Flags.HasFlag(ColumnFlags.CanBeNull), 0, int.MaxValue, allowableType)
+    private protected MdbLongValField(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, MdbColumnType allowableType)
+        : base(column, isNull, binaryValue, column.Flags.HasFlag(MdbColumnFlags.CanBeNull), 0, int.MaxValue, allowableType)
     {
         Reader = reader;
     }

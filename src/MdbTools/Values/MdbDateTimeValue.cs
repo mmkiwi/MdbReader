@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.DateTime"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.DateTime"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -27,10 +27,10 @@ public sealed class MdbDateTimeValue : MdbValue<DateTime>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 8, 8, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.DateTime" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.DateTime" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.DateTime;
+    public static MdbColumnType AllowableType => MdbColumnType.DateTime;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="DateTime" />.
@@ -38,7 +38,7 @@ public sealed class MdbDateTimeValue : MdbValue<DateTime>, IValueAllowableType
     public override DateTime Value => ConversionFunctions.AsDateTime(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.DateTime" />.
+    /// A database value corresponding to an Access <see cref="MdbColumnType.DateTime" />.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -57,8 +57,8 @@ public sealed class MdbDateTimeValue : MdbValue<DateTime>, IValueAllowableType
             : base(column, isNull, binaryValue, true, 8, 8, AllowableType) { }
 
         /// <summary>
-        /// The <see cref="ColumnType" /> that can be used for this value.
-        /// This will always be <see cref="ColumnType.DateTime" />
+        /// The <see cref="MdbColumnType" /> that can be used for this value.
+        /// This will always be <see cref="MdbColumnType.DateTime" />
         /// </summary>
         public override DateTime? Value => IsNull ? null : ConversionFunctions.AsDateTime(BinaryValue.AsSpan());
 

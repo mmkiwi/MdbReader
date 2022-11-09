@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Double"/>. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Double"/>. 
 /// </summary>
 /// <remarks>
 /// <para>
@@ -26,10 +26,10 @@ public sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
         : base(column, isNull, binaryValue, false, 8, 8, AllowableType) { }
 
     /// <summary>
-    /// The <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Double" />
+    /// The <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Double" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Double;
+    public static MdbColumnType AllowableType => MdbColumnType.Double;
 
     /// <summary>
     /// The value for the specific row and column. A <see cref="double" />.
@@ -37,7 +37,7 @@ public sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
     public override double Value => ConversionFunctions.AsDouble(BinaryValue.AsSpan());
 
     /// <summary>
-    /// A database value corresponding to an Access <see cref="ColumnType.Double"/>. 
+    /// A database value corresponding to an Access <see cref="MdbColumnType.Double"/>. 
     /// </summary>
     /// <remarks>
     /// <para>

@@ -27,8 +27,8 @@ internal partial class Jet3Reader
                   (MdbBinary.ReadUInt32LittleEndian(binRowRegion)
                 & (BitConverter.IsLittleEndian ? 0b00111111_11111111_11111111_11111111
                                                : 0b11111111_11111111_11111111_00111111)));
-            LvalType = (LVALType)FirstDataPointer[3];
-            if (!LvalType.HasFlag(LVALType.Inline)) // Memo is stored on Lval Page
+            LvalType = (MdbLvalType)FirstDataPointer[3];
+            if (!LvalType.HasFlag(MdbLvalType.Inline)) // Memo is stored on Lval Page
             {
                 LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.AsSpan().Slice(4, 4));
             }
@@ -38,7 +38,7 @@ internal partial class Jet3Reader
         private ImmutableArray<byte> FirstDataPointer { get; }
 
         public int Length { get; }
-        public LVALType LvalType { get; }
+        public MdbLvalType LvalType { get; }
         private int BytesRead { get; set; }
         private int LvalPointer { get; set; }
 
@@ -50,7 +50,7 @@ internal partial class Jet3Reader
             if (BytesRead >= Length)
                 return 0;
 
-            if (LvalType.HasFlag(LVALType.Inline)) // 0x80 == 1
+            if (LvalType.HasFlag(MdbLvalType.Inline)) // 0x80 == 1
             {
                 FirstDataPointer.AsSpan().Slice(12, Length).CopyTo(buffer);
                 BytesRead += Length;
@@ -61,7 +61,7 @@ internal partial class Jet3Reader
                 int pageNo = LvalPointer >> 8;
                 int rowNo = LvalPointer & 0xff;
 
-                if (LvalType.HasFlag(LVALType.LvalPageType1)) // 0x40 == 1
+                if (LvalType.HasFlag(MdbLvalType.LvalPageType1)) // 0x40 == 1
                 {
                     var lengthInBuffer = Reader.ReadRowFromLvalPage(pageNo, rowNo, buffer);
                     BytesRead += lengthInBuffer;
@@ -78,7 +78,7 @@ internal partial class Jet3Reader
 
         internal void Reset()
         {
-            if (!LvalType.HasFlag(LVALType.Inline)) // Memo is stored on Lval Page
+            if (!LvalType.HasFlag(MdbLvalType.Inline)) // Memo is stored on Lval Page
             {
                 LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.AsSpan().Slice(4, 4));
             }

@@ -9,11 +9,11 @@ using System.Collections.Immutable;
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>
-/// A database value corresponding to an Access <see cref="ColumnType.Boolean" />. 
+/// A database value corresponding to an Access <see cref="MdbColumnType.Boolean" />. 
 /// </summary>
 /// <remarks>
 /// The boolean value is stored in the row's nullable bitmask. Therefore, this is the only 
-/// <see cref="ColumnType" /> that cannot be null. If the nullable bitmask is set, then the
+/// <see cref="MdbColumnType" /> that cannot be null. If the nullable bitmask is set, then the
 /// boolean value is true. <see cref="IMdbValue.IsNull" /> always returns true.
 /// Referred to in the Access GUI as a "Yes/No" column, and as a <c>BIT</c> in SQL.
 /// </remarks>
@@ -31,8 +31,8 @@ public sealed class MdbBoolValue : MdbValue<bool>, IValueAllowableType
     public override bool Value { get; }
 
     /// <summary>
-    /// A list of all <see cref="ColumnType" /> that can be used for this value.
-    /// This will always be <see cref="ColumnType.Boolean" />
+    /// A list of all <see cref="MdbColumnType" /> that can be used for this value.
+    /// This will always be <see cref="MdbColumnType.Boolean" />
     /// </summary>
-    public static ColumnType AllowableType => ColumnType.Boolean;
+    public static MdbColumnType AllowableType => MdbColumnType.Boolean;
 }

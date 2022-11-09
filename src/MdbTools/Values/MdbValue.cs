@@ -16,7 +16,7 @@ namespace MMKiwi.MdbTools.Values;
 /// <list type="table">
 /// <listheader>
 /// <term>MdbValue subclass</term>
-/// <term><see cref="ColumnType" /></term>
+/// <term><see cref="MdbColumnType" /></term>
 /// <term>.NET object type (TVal)</term>
 /// <term>Seperate Nullable Type</term>
 /// <term>Access Column Type, Size</term>
@@ -24,7 +24,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </listheader>
 /// <item>
 /// <term><see cref="MdbBoolValue" /></term>
-/// <term><see cref="ColumnType.Boolean" /></term>
+/// <term><see cref="MdbColumnType.Boolean" /></term>
 /// <term><see cref="bool" /></term>
 /// <term>No</term>
 /// <term>Yes/No</term>
@@ -32,7 +32,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbByteValue" /></term>
-/// <term><see cref="ColumnType.Byte" /></term>
+/// <term><see cref="MdbColumnType.Byte" /></term>
 /// <term><see cref="byte" /></term>
 /// <term>yes</term>
 /// <term>Number, Byte</term>
@@ -40,7 +40,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbIntValue" /></term>
-/// <term><see cref="ColumnType.Int" /></term>
+/// <term><see cref="MdbColumnType.Int" /></term>
 /// <term><see cref="short" /></term>
 /// <term>Yes</term>
 /// <term>Number, Integer</term>
@@ -48,7 +48,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbLongIntValue" /></term>
-/// <term><see cref="ColumnType.LongInt" /></term>
+/// <term><see cref="MdbColumnType.LongInt" /></term>
 /// <term><see cref="int" /></term>
 /// <term>Yes</term>
 /// <term>Number, Long Integer</term>
@@ -56,7 +56,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbSingleValue" /></term>
-/// <term><see cref="ColumnType.Single" /></term>
+/// <term><see cref="MdbColumnType.Single" /></term>
 /// <term><see cref="float" /></term>
 /// <term>Yes</term>
 /// <term>Number, Single</term>
@@ -64,7 +64,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbDoubleValue" /></term>
-/// <term><see cref="ColumnType.Double" /></term>
+/// <term><see cref="MdbColumnType.Double" /></term>
 /// <term><see cref="float" /></term>
 /// <term>Yes</term>
 /// <term>Number, Double</term>
@@ -72,7 +72,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbGuidValue" /></term>
-/// <term><see cref="ColumnType.Guid" /></term>
+/// <term><see cref="MdbColumnType.Guid" /></term>
 /// <term><see cref="Guid" /></term>
 /// <term>Yes</term>
 /// <term>Number, Replication ID</term>
@@ -80,7 +80,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbCurrencyValue" /></term>
-/// <term><see cref="ColumnType.Currency" /></term>
+/// <term><see cref="MdbColumnType.Currency" /></term>
 /// <term><see cref="decimal" /></term>
 /// <term>Yes</term>
 /// <term>Currency</term>
@@ -88,7 +88,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbDateTimeValue" /></term>
-/// <term><see cref="ColumnType.DateTime" /></term>
+/// <term><see cref="MdbColumnType.DateTime" /></term>
 /// <term><see cref="DateTime" /></term>
 /// <term>Yes</term>
 /// <term>Date/Time</term>
@@ -96,7 +96,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbStringValue" /></term>
-/// <term><see cref="ColumnType.Text" /></term>
+/// <term><see cref="MdbColumnType.Text" /></term>
 /// <term><see cref="string" /> (also available as a 
 ///   <see cref="MdbStringValue.RawValue">raw byte value</see>)</term>
 /// <term>Yes</term>
@@ -105,7 +105,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbBinaryValue" /></term>
-/// <term><see cref="ColumnType.Binary" /></term>
+/// <term><see cref="MdbColumnType.Binary" /></term>
 /// <term><see cref="ImmutableArray{T}" /> of <see cref="byte" /></term>
 /// <term>Yes</term>
 /// <term>N/A</term>
@@ -113,7 +113,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbMemoValue" /></term>
-/// <term><see cref="ColumnType.Memo" /></term>
+/// <term><see cref="MdbColumnType.Memo" /></term>
 /// <term><see cref="StreamReader" /></term>
 /// <term>No</term>
 /// <term>Memo (or Long Text)</term>
@@ -121,7 +121,7 @@ namespace MMKiwi.MdbTools.Values;
 /// </item>
 /// <item>
 /// <term><see cref="MdbOleValue" /></term>
-/// <term><see cref="ColumnType.OLE" /></term>
+/// <term><see cref="MdbColumnType.OLE" /></term>
 /// <term><see cref="MdbLValStream" /></term>
 /// <term>No</term>
 /// <term>OLE Object</term>
@@ -164,7 +164,7 @@ public abstract class MdbValue<TVal> : IMdbValue<TVal>
     /// <item><description>isNull is true but allowNull is false</description></item>
     /// </list>
     /// </exception>
-    private protected MdbValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, bool allowNull, int minLength, int maxLength, ColumnType allowableType)
+    private protected MdbValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, bool allowNull, int minLength, int maxLength, MdbColumnType allowableType)
     {
         if (column is null)
             throw new ArgumentNullException(nameof(column));
@@ -173,7 +173,7 @@ public abstract class MdbValue<TVal> : IMdbValue<TVal>
             throw new ArgumentException($"Invalid length {binaryValue.Length}.", nameof(binaryValue));
         if (allowableType != column.Type)
             throw new ArgumentException($"Could not convert field value type {column.Type} to {allowableType}", nameof(column));
-        if (column.Flags.HasFlag(ColumnFlags.CanBeNull) && !allowNull)
+        if (column.Flags.HasFlag(MdbColumnFlags.CanBeNull) && !allowNull)
             throw new ArgumentException($"Cannot create over nullable column", nameof(column));
 
         Column = column;
