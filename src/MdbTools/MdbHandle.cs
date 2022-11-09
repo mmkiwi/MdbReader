@@ -22,7 +22,6 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     private MdbHandle(MdbHeaderInfo headerInfo, Jet3Reader reader)
     {
         Reader = reader;
-        Locale = headerInfo.Locale;
         _userTables = new(GetUserTables, true);
     }
 
@@ -46,7 +45,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     {
         using FileStream mdbFileStream = File.OpenRead(fileName);
 
-        MdbHeaderInfo db = GetDbHeaderInfo(mdbFileStream);
+        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(mdbFileStream);
 
         return new(db, db.JetVersion == JetVersion.Jet3 ? new Jet3FileReader(fileName, db) : throw new InvalidDataException("Only JET3 is supported"));
     }
@@ -79,39 +78,16 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
 
-        MdbHeaderInfo db = GetDbHeaderInfo(stream);
+        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
 
         return new(db, db.JetVersion == JetVersion.Jet3 ? new Jet3StreamReader(stream, db, disableAsyncForThreadSafety) : throw new InvalidDataException("Only JET3 is supported"));
     }
 
-    private static MdbHeaderInfo GetDbHeaderInfo(Stream mdbFileStream)
-    {
-        if (mdbFileStream.Length < Jet3Reader.Constants.PageSize * 3)
-            throw new InvalidDataException("File is not a valid Jet database.");
-
-        byte[] header = new byte[Jet3Reader.Constants.PageSize];
-        mdbFileStream.Seek(0, SeekOrigin.Begin);
-        mdbFileStream.Read(header);
-
-        if (!header.AsSpan(0, Jet3Reader.Constants.JetHeader.Length).SequenceEqual(Jet3Reader.Constants.JetHeader))
-            throw new InvalidDataException("File is not JET database");
-
-        byte jetVersion = header[0x14];
-
-        byte[] tempRc4Key = new byte[] { 0xC7, 0xDA, 0x39, 0x6B };
-
-        RC4.ApplyInPlace(header.AsSpan(0x18, 126), tempRc4Key);
-        short locale = MdbBinary.ReadInt16LittleEndian(header.AsSpan(0x3a));
-        short codePage = MdbBinary.ReadInt16LittleEndian(header.AsSpan(0x3c));
-        var dbKey = header.AsSpan(0x3e, 4).ToArray();
-
-        return new(jetVersion, locale, codePage, dbKey);
-    }
 
     /// <summary>
     /// The encoding for the database.
     /// </summary>
-    public Encoding Encoding => Reader.Encoding;
+    public Encoding Encoding => Reader.Db.Encoding;
 
     private ImmutableArray<MdbTable> GetUserTables()
     {
@@ -182,12 +158,6 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     public void Dispose() => Reader.Dispose();
 
     internal Jet3Reader Reader { get; }
-
-    /// <summary>
-    /// The locale for the database. This doens't affect any outputs, but it does allow for
-    /// consumers of the class to format things similar to how it was done in the Access database.
-    /// </summary>
-    public CultureInfo Locale { get; }
 
     /// <summary>
     /// The encryption key for the database

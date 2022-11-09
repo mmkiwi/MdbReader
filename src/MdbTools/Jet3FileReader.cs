@@ -32,7 +32,7 @@ internal class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
         FileStream stream = OpenStream();
         await using (stream.ConfigureAwait(false))
         {
-            stream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
+            stream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
             stream.Read(buffer.Span);
             DecryptPage(pageNo, buffer.Span);
         }
@@ -41,7 +41,7 @@ internal class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
     protected override void ReadPartialPageToBuffer(int pageNo, Span<byte> buffer, int start)
     {
         FileStream stream = OpenStream();
-        stream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
+        stream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
         stream.Read(buffer);
         DecryptPage(pageNo, buffer);
     }

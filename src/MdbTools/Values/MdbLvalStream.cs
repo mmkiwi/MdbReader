@@ -21,7 +21,7 @@ public class MdbLValStream : Stream
     {
         LvalStream = lvalStream;
         Length = LvalStream.Length;
-        Buffer = new byte[Math.Min(Length, Jet3Reader.Constants.PageSize)];
+        Buffer = new byte[Math.Min(Length, lvalStream.Reader.PageSize)];
     }
 
     private Jet3Reader.LvalStream LvalStream { get; }

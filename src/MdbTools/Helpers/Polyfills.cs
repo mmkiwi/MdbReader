@@ -43,6 +43,10 @@ internal static class MdbBinary
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void WriteInt32LittleEndian(Span<byte> destination, int value)
         => BinaryPrimitives.WriteInt32LittleEndian(destination, value);
+    /// <inheritdoc cref="BinaryPrimitives.WriteInt32LittleEndian(Span{byte}, int) "/>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void WriteUInt32LittleEndian(Span<byte> destination, uint value)
+        => BinaryPrimitives.WriteUInt32LittleEndian(destination, value);
 
 #if NET5_0_OR_GREATER
     /// <inheritdoc cref="BinaryPrimitives.ReadSingleLittleEndian(ReadOnlySpan{byte}) "/>

@@ -28,7 +28,7 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
             ReadPartialPageToBuffer(pageNo, buffer.Span, start);
         else
         {
-            MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
+            MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
             await MdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
             DecryptPage(pageNo, buffer.Span);
         }
@@ -38,7 +38,7 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
     {
         lock (_lock)
         {
-            MdbStream.Seek(pageNo * Constants.PageSize + start, SeekOrigin.Begin);
+            MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
             MdbStream.Read(buffer);
             DecryptPage(pageNo, buffer);
         }

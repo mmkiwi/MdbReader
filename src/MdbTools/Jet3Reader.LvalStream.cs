@@ -33,7 +33,7 @@ internal partial class Jet3Reader
                 LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.AsSpan().Slice(4, 4));
             }
         }
-        private Jet3Reader Reader { get; }
+        internal Jet3Reader Reader { get; }
         public MdbColumn Column { get; }
         private ImmutableArray<byte> FirstDataPointer { get; }
 

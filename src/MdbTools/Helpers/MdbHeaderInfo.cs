@@ -4,6 +4,7 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 
@@ -11,13 +12,19 @@ namespace MMKiwi.MdbTools.Helpers;
 
 internal record MdbHeaderInfo
 {
-    public MdbHeaderInfo(byte jetVersion, short localeCode, short codePage, byte[] dbKey)
+    public MdbHeaderInfo(JetVersion jetVersion, ushort collation, ushort codePage, uint dbKey, ImmutableArray<byte> dbPasswd, DateTime creationDate, Jet3Reader.Constants constants)
     {
-        JetVersion = (JetVersion)jetVersion;
-        Locale = CultureInfo.GetCultureInfo(localeCode);
+        JetVersion = jetVersion;
+        Collation = collation;
+
         RegisterEncoding();
         Encoding = Encoding.GetEncoding(codePage);
+
         DbKey = dbKey;
+        DbPasswd = dbPasswd;
+        CreationDate = creationDate;
+
+        Constants = constants;
     }
 
     static void RegisterEncoding()
@@ -32,7 +39,10 @@ internal record MdbHeaderInfo
     static bool s_isRegistered = false;
 
     public JetVersion JetVersion { get; }
-    public CultureInfo Locale { get; }
+    public ushort Collation { get; }
     public Encoding Encoding { get; }
-    public byte[] DbKey { get; }
+    public uint DbKey { get; }
+    public ImmutableArray<byte> DbPasswd { get; }
+    public DateTime CreationDate { get; }
+    public Jet3Reader.Constants Constants { get; }
 }
