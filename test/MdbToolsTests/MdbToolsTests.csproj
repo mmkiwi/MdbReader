@@ -32,11 +32,6 @@
     <ProjectReference Include="..\..\src\MdbTools\MdbTools.csproj" />
     <ProjectReference Include="..\MdbCreateJson\MdbCreateJson.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
   <ItemGroup>
     <None Update="Databases\Northwind_Modified.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
