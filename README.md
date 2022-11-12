@@ -1,13 +1,19 @@
 # MdbTools in C#
 
-Currently pre-pre alpha, can only read a table definition. Loosely based on MdbTools
+Currently pre-pre alpha, can read table definition and row values. Loosely based on MdbTools
 (https://github.com/mdbtools/mdbtools) and deeply indebted to their work documenting the mdb format
 (https://github.com/mdbtools/mdbtools/blob/dev/HACKING.md)
 
 ## Current Status
 
-The library is currently only functional for Jet3 databases. It is currently read-only and cannot
-modify databases at all.
+The library is currently read-only and cannot modify databases at all. It has support for both Jet3 and Jet4-style
+databases. (Any version of access later than 1995). It has not been thoroughly tested and should not be used in
+production code. It features heave use of Span<byte> to ensure that there are no buffer overruns, but it may crash on
+some databases.
+
+Indices are not currently supported, but may be at a future time. Indices are not required to read the data in the table.
+Rows can be enumerated one-by-one. There is no querying or indexing supported besides the standard extensions to IEnumerable
+in .NET.
 
 For an example of the API, see the test/MdbCreateJson folder.
 
@@ -18,8 +24,6 @@ tested.
 
 ## Roadmap
 
-* Support Jet4+
 * Improve unit testing
 * Support for writing
-* Support for .NET standard 2.1
 * Test on big-endian system
