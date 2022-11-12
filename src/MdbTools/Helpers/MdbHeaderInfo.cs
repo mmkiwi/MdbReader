@@ -12,7 +12,7 @@ namespace MMKiwi.MdbTools.Helpers;
 
 internal record MdbHeaderInfo
 {
-    public MdbHeaderInfo(JetVersion jetVersion, ushort collation, ushort codePage, uint dbKey, ImmutableArray<byte> dbPasswd, DateTime creationDate, Jet3Reader.Constants constants)
+    public MdbHeaderInfo(JetVersion jetVersion, ushort collation, ushort codePage, uint dbKey, DateTime creationDate, JetConstants constants)
     {
         JetVersion = jetVersion;
         Collation = collation;
@@ -21,7 +21,6 @@ internal record MdbHeaderInfo
         Encoding = Encoding.GetEncoding(codePage);
 
         DbKey = dbKey;
-        DbPasswd = dbPasswd;
         CreationDate = creationDate;
 
         Constants = constants;
@@ -42,7 +41,6 @@ internal record MdbHeaderInfo
     public ushort Collation { get; }
     public Encoding Encoding { get; }
     public uint DbKey { get; }
-    public ImmutableArray<byte> DbPasswd { get; }
     public DateTime CreationDate { get; }
-    public Jet3Reader.Constants Constants { get; }
+    public JetConstants Constants { get; }
 }

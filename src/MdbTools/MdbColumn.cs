@@ -4,10 +4,10 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Text;
 
-using MMKiwi.MdbTools.Mutable;
+using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
 
@@ -17,19 +17,17 @@ namespace MMKiwi.MdbTools;
 [DebuggerDisplay("MdbColumn {Name} {Type}")]
 public sealed record class MdbColumn
 {
-    internal MdbColumn(MdbBuilder.Column column)
+    private MdbColumn(MdbColumnType type, ushort indexIncludingDeleted, ushort offsetVariable, int index, IMdbMiscColumnInfo columnInfo, MdbColumnFlags flags, ushort offsetFixed, ushort length, string name)
     {
-        Type = column.Type;
-        IndexIncludingDeleted = column.NumInclDeleted;
-        OffsetVariable = column.OffsetVariable;
-        Index = column.ColNum;
-        SortOrder = column.SortOrder;
-        Locale = column.Locale;
-        Flags = column.Flags;
-        OffsetFixed = column.OffsetFixed;
-        Length = column.Length;
-        Name = column.Name!;
-        Encoding = column.Encoding;
+        Type = type;
+        IndexIncludingDeleted = indexIncludingDeleted;
+        OffsetVariable = offsetVariable;
+        Index = index;
+        ColumnInfo = columnInfo;
+        Flags = flags;
+        OffsetFixed = offsetFixed;
+        Length = length;
+        Name = name;
     }
 
     /// <summary>
@@ -52,14 +50,9 @@ public sealed record class MdbColumn
     public int Index { get; }
 
     /// <summary>
-    /// The column sort order (may not match the order in the underlying database file)
+    /// Miscellaneous column info. This will be a <see cref="MdbDecimalColumnInfo"/>, <see cref="MdbTextColumnInfo"/>, or <see cref="MdbComplexColumnInfo"/>.
     /// </summary>
-    public ushort SortOrder { get; }
-
-    /// <summary>
-    /// The locale for the column
-    /// </summary>
-    public ushort Locale { get; }
+    public IMdbMiscColumnInfo ColumnInfo { get; }
 
     /// <summary>
     /// The flags set on the column. Use <see cref="Enum.HasFlag(Enum)" /> to see if the flag is set.
@@ -83,7 +76,71 @@ public sealed record class MdbColumn
     public string Name { get; }
 
     /// <summary>
-    /// The encoding of the column.
+    /// The mutable builder for <see cref="MdbColumn" />
     /// </summary>
-    public Encoding Encoding { get; }
+    internal class Builder
+    {
+
+        public MdbColumnType Type { get; set; }
+        public ushort NumInclDeleted { get; set; }
+        public ushort OffsetVariable { get; set; }
+        public ushort ColNum { get; set; }
+        public ImmutableArray<byte> Misc { get; set; }
+        public MdbColumnFlags Flags { get; set; }
+        public ushort OffsetFixed { get; set; }
+        public ushort Length { get; set; }
+        public string? Name { get; set; }
+        public int UsedPages { get; set; }
+        public int FreePages { get; set; }
+
+        public MdbColumn Build(Jet3Reader reader)
+        {
+            if (Name == null)
+                throw new InvalidOperationException("All values must be initialized before building MdbColumn");
+
+            return new MdbColumn(
+                type: Type,
+                indexIncludingDeleted: NumInclDeleted,
+                offsetVariable: OffsetVariable,
+                index: ColNum,
+                columnInfo: BuildColumnInfo(reader),
+                flags: Flags,
+                offsetFixed: OffsetFixed,
+                length: Length,
+                name: Name);
+        }
+
+        private IMdbMiscColumnInfo BuildColumnInfo(Jet3Reader reader)
+        {
+            if (reader.Db.JetVersion == JetVersion.Jet3)
+            {
+                if (Type is MdbColumnType.Text or MdbColumnType.Memo)
+                {
+                    return new MdbTextColumnInfo(reader, 
+                        MdbBinary.ReadUInt16LittleEndian(Misc.AsSpan()[..2]),
+                        MdbBinary.ReadUInt16LittleEndian(Misc.AsSpan()[2..4]));
+                }
+                else
+                {
+                    return new MdbDecimalColumnInfo(Misc[1], Misc[2]);
+                }
+            }
+            else
+            {
+                if (Type is MdbColumnType.Text or MdbColumnType.Memo)
+                {
+                    return new MdbTextColumnInfo(reader, 
+                        MdbBinary.ReadUInt16LittleEndian(Misc.AsSpan()[..2]));
+                }
+                else if (Type is MdbColumnType.Complex)
+                {
+                    return new MdbComplexColumnInfo(MdbBinary.ReadUInt32LittleEndian(Misc.AsSpan()));
+                }
+                else
+                {
+                    return new MdbDecimalColumnInfo(Misc[0], Misc[1]);
+                }
+            }
+        }
+    }
 }

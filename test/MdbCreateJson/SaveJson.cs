@@ -66,4 +66,4 @@ var options = new JsonSerializerOptions
 };
 
 using var jsonFile = File.Open("Databases/Northwind_Modified.mdb.json", FileMode.Create, FileAccess.Write);
-JsonSerializer.Serialize(jsonFile, new MdbJsonDatabase(outTables.ToImmutableDictionary()), options);
+JsonSerializer.Serialize(jsonFile, new MdbJsonDatabase(outTables.ToImmutableDictionary(), handle.DbKey, handle.CreationDate, handle.Encoding.CodePage, handle.Collation), options);

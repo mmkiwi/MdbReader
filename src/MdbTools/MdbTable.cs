@@ -6,8 +6,7 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
-
-using MMKiwi.MdbTools.Mutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MMKiwi.MdbTools;
 
@@ -17,36 +16,28 @@ namespace MMKiwi.MdbTools;
 [DebuggerDisplay("MdbTable {Name}")]
 public sealed record class MdbTable
 {
-    internal MdbTable(string name, MdbBuilder.Table tableBuilder, MdbHandle handle)
+    private MdbTable(string name, int numRows, int nextAutoNum, MdbTableType tableType, ushort maxCols, ushort numVarCols, ushort numColumns, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage, ImmutableArray<MdbColumn> columns, Jet3Reader reader)
     {
         Name = name;
-        NumRows = tableBuilder.NumRows;
-        NextAutoNum = tableBuilder.NextAutoNum;
-        TableType = tableBuilder.TableType;
-        MaxCols = tableBuilder.MaxCols;
-        NumVarCols = tableBuilder.NumVarCols;
-        NumColumns = tableBuilder.NumCols;
-        NumIndexes = tableBuilder.NumIndexes;
-        NumRealIndexes = tableBuilder.NumRealIndexes;
-        UsedPagesPtr = tableBuilder.UsedPagesPtr;
-        FreePagesPtr = tableBuilder.FreePagesPtr;
-        FirstPage = tableBuilder.FirstPage;
-        Handle = handle;
-        Columns = tableBuilder.Columns?.Select(c => new MdbColumn(c)).ToImmutableArray() ?? ImmutableArray<MdbColumn>.Empty;
+        NumRows = numRows;
+        NextAutoNum = nextAutoNum;
+        TableType = tableType;
+        MaxCols = maxCols;
+        NumVarCols = numVarCols;
+        NumColumns = numColumns;
+        NumIndexes = numIndexes;
+        NumRealIndexes = numRealIndexes;
+        UsedPagesPtr = usedPagesPtr;
+        FreePagesPtr = freePagesPtr;
+        FirstPage = firstPage;
+        Columns = columns;
+        Rows = new MdbRows(reader, this);
     }
-
-    /// <summary>
-    /// Get all the rows in the database asynchronously.
-    /// </summary>
-    /// <param name="ct">A <see cref="CancellationToken" /> to cancel the enumeration</param>
-    public IAsyncEnumerable<MdbDataRow> GetRowsAsync(CancellationToken ct = default)
-        => Handle.EnumerateRowsAsync(this, null, ct);
-
 
     /// <summary>
     /// An enumerator for all the rows in the database.
     /// </summary>
-    public IEnumerable<MdbDataRow> Rows => Handle.EnumerateRows(this, null);
+    public MdbRows Rows { get; }
 
     /// <summary>
     /// The name of the table
@@ -111,12 +102,58 @@ public sealed record class MdbTable
     internal int FirstPage { get; }
 
     /// <summary>
-    /// The parent MdbHandle
-    /// </summary>
-    public MdbHandle Handle { get; }
-
-    /// <summary>
     /// The columns in the table
     /// </summary>
     public ImmutableArray<MdbColumn> Columns { get; }
+
+    internal class Builder
+    {
+        internal Builder() { }
+
+        public int NumRows { get; set; }
+        public int NextAutoNum { get; set; }
+        public int? AutoNumIncrement { get; set; }
+        public MdbTableType TableType { get; set; }
+        public ushort MaxCols { get; set; }
+        public ushort NumVarCols { get; set; }
+        public ushort NumColumns { get; set; }
+        public int NumIndexes { get; set; }
+        public int NumRealIndexes { get; set; }
+        public int UsedPagesPtr { get; set; }
+        public int FreePagesPtr { get; set; }
+        public int FirstPage { get; set; }
+        public MdbColumn.Builder[]? Columns { get; set; }
+        public MdbRealIndex.Builder[]? RealIndices { get; set; }
+        public MdbIndex.Builder[]? Indices { get; set; }
+
+        [MemberNotNull(nameof(Columns), nameof(RealIndices), nameof(Indices))]
+        public void InitializeArrays()
+        {
+            Columns = new MdbColumn.Builder[NumColumns];
+            Indices = new MdbIndex.Builder[NumIndexes];
+            RealIndices = new MdbRealIndex.Builder[NumRealIndexes];
+        }
+
+        public MdbTable Build(string name, Jet3Reader reader)
+        {
+            if (Columns == null || RealIndices == null | Indices == null)
+                throw new InvalidOperationException("All objects must be initialized before building table");
+
+            return new MdbTable(
+                name: name,
+                numRows: NumRows,
+                nextAutoNum: NextAutoNum,
+                tableType: TableType,
+                maxCols: MaxCols,
+                numVarCols: NumVarCols,
+                numColumns: NumColumns,
+                numIndexes: NumIndexes,
+                numRealIndexes: NumRealIndexes,
+                usedPagesPtr: UsedPagesPtr,
+                freePagesPtr: FreePagesPtr,
+                firstPage: FirstPage,
+                columns: Columns.Select(c=>c.Build(reader)).ToImmutableArray(),
+                reader: reader);
+        }
+    }
 }

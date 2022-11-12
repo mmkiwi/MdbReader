@@ -55,3 +55,50 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
         MdbStream.Dispose();
     }
 }
+
+
+internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposable
+{
+
+    private readonly object _lock = new();
+
+    public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbHeaderInfo db, Stream? parentStream) : base(db)
+    {
+        MdbStreamGemerator = mdbStreamGenerator;
+        ParentStream = parentStream;
+    }
+
+    public Func<Stream> MdbStreamGemerator { get; }
+    public Stream? ParentStream { get; }
+
+    protected override async Task ReadPartialPageToBufferAsync(int pageNo, Memory<byte> buffer, int start, CancellationToken ct)
+    {
+        using Stream MdbStream = MdbStreamGemerator();
+        MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
+        await MdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
+        DecryptPage(pageNo, buffer.Span);
+    }
+
+    protected override void ReadPartialPageToBuffer(int pageNo, Span<byte> buffer, int start)
+    {
+        using Stream MdbStream = MdbStreamGemerator();
+        MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
+        MdbStream.Read(buffer);
+        DecryptPage(pageNo, buffer);
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+
+        IsDisposed = true;
+        if (ParentStream != null)
+        {
+            await ParentStream.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+    public override void Dispose()
+    {
+        IsDisposed = true;
+        ParentStream?.Dispose();
+    }
+}

@@ -5,6 +5,7 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Collections.Immutable;
+using System.Text;
 
 namespace MMKiwi.MdbTools.Values;
 
@@ -33,7 +34,8 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
     internal MdbStringValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
         : base(column, isNull, ImmutableArray<byte>.Empty, false, 0, column.Length, AllowableType)
     {
-        Value = ConversionFunctions.AsString(Column.Encoding, binaryValue.AsSpan());
+        var encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding;
+        Value = ConversionFunctions.AsString(encoding, binaryValue.AsSpan());
     }
 
     /// <summary>
@@ -96,7 +98,8 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
         internal Nullable(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
             : base(column, isNull, ImmutableArray<byte>.Empty, true, 0, column.Length, AllowableType)
         {
-            Value = IsNull ? null : ConversionFunctions.AsString(Column.Encoding, binaryValue.AsSpan());
+            var encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding;
+            Value = IsNull ? null : ConversionFunctions.AsString(encoding, binaryValue.AsSpan());
         }
 
         /// <summary>

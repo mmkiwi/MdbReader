@@ -135,9 +135,14 @@ public enum MdbColumnType : byte
     Guid = 0x0F,
 
     /// <summary>
-    /// Not used in JET 3 databases
+    /// Fixed Point, 96 bit, stored in 17 bytes 
     /// </summary>
-    Numeric = 0x10
+    Numeric = 0x10,
+
+    /// <summary>
+    /// Complex field (32 bit integer key) 
+    /// </summary>
+    Complex = 0x12
 }
 
 /// <summary>
