@@ -38,7 +38,7 @@ public class MdbTests
         {
             await using MdbHandle handle = await MdbHandle.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
-            foreach(var table in handle.Tables)
+            foreach (var table in handle.Tables)
             {
                 if (!jsonDatabase.Tables.ContainsKey(table.Name))
                     continue;
@@ -152,6 +152,7 @@ public class MdbTests
                             byteFieldNull.Value.Should().Be(jv.GetByte());
                             break;
                         default:
+                            throw new NotImplementedException();
                             break;
                     }
                 }
@@ -217,6 +218,7 @@ public class MdbTests
                             byteFieldNull.Value.Should().Be(jv.GetByte());
                             break;
                         default:
+                            throw new NotImplementedException();
                             break;
                     }
                 }

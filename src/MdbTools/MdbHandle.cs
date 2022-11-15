@@ -4,6 +4,7 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Buffers;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -43,11 +44,14 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     public static MdbHandle Open(string fileName)
     {
         using FileStream mdbFileStream = File.OpenRead(fileName);
+        var pool = ArrayPool<byte>.Create(ArrayPoolSize, ArrayPoolMaxNum);
+        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(mdbFileStream, pool);
 
-        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(mdbFileStream);
-
-        return new(new Jet3FileReader(fileName, db));
+        return new(new Jet3FileReader(fileName, db, pool));
     }
+
+    private const int ArrayPoolSize = 4096;
+    private const int ArrayPoolMaxNum = 10;
 
     /// <summary>
     /// Asynchronously opens an mdb file on the filesystem.
@@ -65,10 +69,10 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     public async static Task<MdbHandle> OpenAsync(string fileName, CancellationToken ct = default)
     {
         using FileStream mdbFileStream = File.OpenRead(fileName);
-
+        var pool = ArrayPool<byte>.Create(ArrayPoolSize, ArrayPoolMaxNum);
         MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(mdbFileStream, ct).ConfigureAwait(false);
 
-        return new(new Jet3FileReader(fileName, db));
+        return new(new Jet3FileReader(fileName, db, pool));
     }
 
     /// <summary>
@@ -98,10 +102,10 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
             throw new ArgumentNullException(nameof(stream));
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
+        var pool = ArrayPool<byte>.Create(ArrayPoolSize, ArrayPoolMaxNum);
+        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream, pool);
 
-        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
-
-        return new(new Jet3StreamReader(stream, db, disableAsyncForThreadSafety));
+        return new(new Jet3StreamReader(stream, db, disableAsyncForThreadSafety, pool));
     }
 
     /// <summary>
@@ -124,9 +128,9 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         using var stream = streamFactory();
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
-
-        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
-        return new(new Jet3StreamFactoryReader(streamFactory, db, parentStream));
+        var pool = ArrayPool<byte>.Create(ArrayPoolSize, ArrayPoolMaxNum);
+        MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream, pool);
+        return new(new Jet3StreamFactoryReader(streamFactory, db, parentStream, pool));
     }
 
     /// <summary>
@@ -150,9 +154,9 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         using var stream = streamFactory();
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
-
+        var pool = ArrayPool<byte>.Create(ArrayPoolSize, ArrayPoolMaxNum);
         MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(stream, ct).ConfigureAwait(false);
-        return new(new Jet3StreamFactoryReader(streamFactory, db, parentStream));
+        return new(new Jet3StreamFactoryReader(streamFactory, db, parentStream, pool));
     }
 
     /// <summary>

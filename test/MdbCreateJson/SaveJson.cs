@@ -6,7 +6,7 @@ using MMKiwi.MdbTools;
 using MMKiwi.MdbTools.Values;
 using MMKiwi.MdbTools.MdbCreateJson.Model;
 
-using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.mdb");
+using MdbHandle handle = MdbHandle.Open("Databases/Northwind_Modified.jet3.mdb");
 
 Dictionary<string, MdbJsonTable> outTables = new(handle.Tables.Length);
 
@@ -65,5 +65,5 @@ var options = new JsonSerializerOptions
     Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
 };
 
-using var jsonFile = File.Open("Databases/Northwind_Modified.mdb.json", FileMode.Create, FileAccess.Write);
+using var jsonFile = File.Open("Databases/Northwind_Modified.jet3.mdb.json", FileMode.Create, FileAccess.Write);
 JsonSerializer.Serialize(jsonFile, new MdbJsonDatabase(outTables.ToImmutableDictionary(), handle.DbKey, handle.CreationDate, handle.Encoding.CodePage, handle.Collation), options);

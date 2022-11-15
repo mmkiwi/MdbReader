@@ -4,13 +4,15 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Buffers;
+
 using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
 
 internal class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
-    public Jet3FileReader(string filePath, MdbHeaderInfo db) : base(db)
+    public Jet3FileReader(string filePath, MdbHeaderInfo db, ArrayPool<byte> pool) : base(db, pool)
     {
         FilePath = filePath;
         MdbStream = OpenStream();

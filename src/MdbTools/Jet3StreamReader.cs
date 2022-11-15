@@ -4,6 +4,8 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Buffers;
+
 using MMKiwi.MdbTools.Helpers;
 
 namespace MMKiwi.MdbTools;
@@ -13,7 +15,7 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 
     private readonly object _lock = new();
 
-    public Jet3StreamReader(Stream mdbStream, MdbHeaderInfo db, bool disableAsyncForThreadSafety) : base(db)
+    public Jet3StreamReader(Stream mdbStream, MdbHeaderInfo db, bool disableAsyncForThreadSafety, ArrayPool<byte> pool) : base(db, pool)
     {
         MdbStream = mdbStream;
         DisableAsync = disableAsyncForThreadSafety;
@@ -62,7 +64,7 @@ internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposab
 
     private readonly object _lock = new();
 
-    public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbHeaderInfo db, Stream? parentStream) : base(db)
+    public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbHeaderInfo db, Stream? parentStream, ArrayPool<byte> pool) : base(db, pool)
     {
         MdbStreamGemerator = mdbStreamGenerator;
         ParentStream = parentStream;

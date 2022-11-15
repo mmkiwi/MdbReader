@@ -11,13 +11,15 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using MMKiwi.MdbTools.Helpers;
+using System.Buffers;
 
 namespace MMKiwi.MdbTools;
 
 internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 {
-    protected Jet3Reader(MdbHeaderInfo db)
+    protected Jet3Reader(MdbHeaderInfo db, ArrayPool<byte> pool)
     {
+        MdbPool = new MdbPool(pool);
         Db = db;
         if (db.DbKey == 0)
             DbKey = null;
@@ -25,28 +27,34 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             MdbBinary.WriteUInt32LittleEndian(DbKey, db.DbKey);
     }
 
-    public static MdbHeaderInfo GetDatabaseInfo(Stream mdbStream)
+    public static MdbHeaderInfo GetDatabaseInfo(Stream mdbStream, ArrayPool<byte> pool)
     {
         if (mdbStream.Length < JetConstants.Jet3.PageSize * 3)
             throw new InvalidDataException("File is not JET database. File too short.");
 
-        byte[] header = new byte[JetConstants.Jet3.PageSize];
+        var memBuffer = pool.Rent(JetConstants.Jet3.PageSize);
+        try{
+        var header = memBuffer.AsSpan(0, JetConstants.Jet3.PageSize);
         mdbStream.Seek(0, SeekOrigin.Begin);
         mdbStream.Read(header);
 
         return ReadFirstPage(header);
+        }
+        finally {
+            pool.Return(memBuffer);
+        }
     }
 
     public async static Task<MdbHeaderInfo> GetDatabaseInfoAsync(Stream mdbStream, CancellationToken ct)
     {
         if (mdbStream.Length < JetConstants.Jet3.PageSize * 3)
             throw new InvalidDataException("File is not JET database. File too short.");
-
-        byte[] header = new byte[JetConstants.Jet3.PageSize];
+        using var memoryBuffer = MemoryPool<byte>.Shared.Rent(JetConstants.Jet3.PageSize);
+        Memory<byte> header = memoryBuffer.Memory[..JetConstants.Jet3.PageSize];
         mdbStream.Seek(0, SeekOrigin.Begin);
-        await mdbStream.ReadAsync(header.AsMemory(), ct).ConfigureAwait(false);
+        await mdbStream.ReadAsync(header, ct).ConfigureAwait(false);
 
-        return ReadFirstPage(header);
+        return ReadFirstPage(header.Span);
     }
 
     private static MdbHeaderInfo ReadFirstPage(Span<byte> header)
@@ -66,7 +74,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         if (!header.Slice(0x04, fileFormatId.Length).SequenceEqual(fileFormatId))
             throw new InvalidDataException("File is not JET database. Invalid file format ID");
-
+#warning todo move to constants
         byte[] tempRc4Key = new byte[] { 0xC7, 0xDA, 0x39, 0x6B };
         var encryptedHeader = header.Slice(0x18, constants.DbPage.DbHeaderSize);
         // The next 126 or 128 bytes are RC4 encoded, decode in memory
@@ -82,6 +90,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         return new(jetVersion, collation, codePage, dbKey, creationDate, constants);
     }
 
+    public MdbPool MdbPool { get; }
     public MdbHeaderInfo Db { get; }
     public byte[]? DbKey { get; }
 
@@ -113,14 +122,14 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     {
         int pageNo = mapPtr >> 8;
 
-        byte[] buffer = new byte[PageSize];
-
+        using var bufferMemory = MemoryPool<byte>.Shared.Rent(PageSize);
+        Memory<byte> buffer = bufferMemory.Memory[..PageSize];
         await ReadPageToBufferAsync(pageNo, buffer, MdbPageType.Data, ct).ConfigureAwait(false);
 
-        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(10));
+        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.Span.Slice(10));
         int mapSize = PageSize - rowLocation;
 
-        return buffer.AsSpan(rowLocation, mapSize).ToArray();
+        return buffer.Slice(rowLocation, mapSize).ToArray();
     }
 
     protected virtual void DecryptPage(int pageNo, Span<byte> buffer)
@@ -139,15 +148,16 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         var c = Db.Constants.UsageMap;
         int pageNo = mapPtr >> 8;
         byte[] x = new byte[4];
-         System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(x, mapPtr);
-        byte[] buffer = new byte[PageSize];
+        MdbBinary.WriteInt32LittleEndian(x, mapPtr);
+        using var memoryBuffer = MdbPool.Rent(PageSize);
+        Span<byte> buffer = memoryBuffer.Trimmed;
 
         ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
-        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(c.RowCount));
+        ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer[c.RowCount]);
         int mapSize = PageSize - rowLocation;
 
-        return buffer.AsSpan(rowLocation, mapSize).ToArray();
+        return buffer.Slice(rowLocation, mapSize).ToArray();
     }
 
     internal async Task<MdbTable.Builder> ReadTableDefAsync(int startPage, CancellationToken ct)
@@ -156,15 +166,18 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         int usedDataLength = PageSize - 8;
 
-        byte[] buffer = new byte[Math.Max(dataLength, PageSize - 8)];
-        await ReadPartialPageToBufferAsync(startPage, buffer.AsMemory(0, Math.Min(dataLength, PageSize - 8)), 8, ct).ConfigureAwait(false);
+        int length = Math.Max(dataLength, PageSize - 8);
+
+        using var memoryBuffer = MemoryPool<byte>.Shared.Rent(length);
+        var buffer = memoryBuffer.Memory[..length];
+        await ReadPartialPageToBufferAsync(startPage, buffer[..Math.Min(dataLength, PageSize - 8)], 8, ct).ConfigureAwait(false);
 
         while (dataLength > usedDataLength)
         {
-            (nextPage, _) = await ReadNextTablePageAsync(nextPage, buffer.AsMemory(usedDataLength), ct).ConfigureAwait(false);
+            (nextPage, _) = await ReadNextTablePageAsync(nextPage, buffer[usedDataLength..], ct).ConfigureAwait(false);
             usedDataLength += PageSize - 8;
         }
-        return ParseTable(startPage, buffer);
+        return ParseTable(startPage, buffer.Span);
     }
 
     internal MdbTable.Builder ReadTableDef(int startPage)
@@ -172,13 +185,13 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         (int nextPage, int dataLength) = ReadNextTablePage(startPage, null);
 
         int usedDataLength = PageSize - 8;
-
-        byte[] buffer = new byte[Math.Max(dataLength, PageSize - 8)];
-        ReadPartialPageToBuffer(startPage, buffer.AsSpan(0, Math.Min(dataLength, PageSize - 8)), 8);
+        using var memoryBuffer = MdbPool.Rent(PageSize - 8);
+        Span<byte> buffer = memoryBuffer.Trimmed;
+        ReadPartialPageToBuffer(startPage, buffer[..Math.Min(dataLength, PageSize - 8)], 8);
 
         while (dataLength > usedDataLength)
         {
-            (nextPage, _) = ReadNextTablePage(nextPage, buffer.AsSpan(usedDataLength));
+            (nextPage, _) = ReadNextTablePage(nextPage, buffer[usedDataLength..]);
             usedDataLength += PageSize - 8;
         }
         return ParseTable(startPage, buffer);
@@ -363,10 +376,10 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     private async Task<(int nextPage, int dataLength)> ReadNextTablePageAsync(int nextPage, Memory<byte> buffer, CancellationToken ct)
     {
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
-        byte[] header = new byte[16];
-        await ReadPageToBufferAsync(nextPage, header, MdbPageType.TableDefinition, ct).ConfigureAwait(false);
+        using var header = MemoryPool<byte>.Shared.Rent(16);
+        await ReadPageToBufferAsync(nextPage, header.Memory[..16], MdbPageType.TableDefinition, ct).ConfigureAwait(false);
 
-        (int newNextPage, int dataLength, _) = ReadTablePageHeader(header);
+        (int newNextPage, int dataLength, _) = ReadTablePageHeader(header.Memory.Span[..16]);
 
         if (buffer.Length > 0) // first time around, we won't 
             await ReadPartialPageToBufferAsync(nextPage, buffer[..Math.Min(buffer.Length, PageSize - 8)], 8, ct).ConfigureAwait(false);
@@ -429,10 +442,12 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
                 if (mapPage == 0)
                     continue;
-                byte[] buffer = new byte[PageSize];
+                using var memoryBuffer = MemoryPool<byte>.Shared.Rent(PageSize);
+                Memory<byte> buffer = memoryBuffer.Memory[..PageSize];
                 await ReadPageToBufferAsync(mapPage, buffer, MdbPageType.PageUseageBitmap, ct).ConfigureAwait(false);
 
-                BitArray usageBitmap = new(buffer[4..]);
+#warning todo try and remove allocation here
+                BitArray usageBitmap = new(buffer[4..].ToArray());
                 for (int j = startPage + 1; j < usageBitmap.Length; j++)
                     if (usageBitmap[j])
                         return j;
@@ -441,7 +456,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         }
         throw new FormatException();
     }
-
+#warning todo add async
     internal int FindNextMap(byte[] map, int startPage)
     {
         var c = Db.Constants.UsageMap;
@@ -456,17 +471,18 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         }
         else if (map[0] == 1)
         {
-
             int maxPages = (map.Length - 1) / 4;
             for (int i = (startPage + 1) / c.UsageMapLen; i < maxPages; i++)
             {
                 int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
                 if (mapPage == 0)
                     continue;
-                byte[] buffer = new byte[PageSize];
-                ReadPageToBuffer(mapPage, buffer, MdbPageType.PageUseageBitmap);
 
-                BitArray usageBitmap = new(buffer[4..]);
+                using var memoryBuffer = MdbPool.Rent(PageSize);
+                Span<byte> buffer = memoryBuffer.Trimmed;
+                ReadPageToBuffer(mapPage, buffer, MdbPageType.PageUseageBitmap);
+#warning todo try and remove allocation here
+                BitArray usageBitmap = new(buffer[4..].ToArray());
                 for (int j = startPage + 1; j < usageBitmap.Length; j++)
                     if (usageBitmap[j])
                         return j;
@@ -493,15 +509,15 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         // +--------------------------------------------------------------------------+
         // | ???? | 2 bytes | offset_row | The record's location on this page         |
         // +--------------------------------------------------------------------------+
-
-        byte[] buffer = new byte[PageSize];
+        using var memoryBuffer = MemoryPool<byte>.Shared.Rent(PageSize);
+        var buffer = memoryBuffer.Memory[..PageSize];
 
         await ReadPageToBufferAsync(page, buffer, MdbPageType.Data, ct).ConfigureAwait(false);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
-        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
+        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.Span[8..]);
 
-        var rowOffsets = GetRowOffsets(numRows, buffer);
+        var rowOffsets = GetRowOffsets(numRows, buffer.Span);
 
         foreach (var rowOffset in rowOffsets)
         {
@@ -509,11 +525,11 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 continue;
 
             yield return rowOffset.IsLookup
-                ? CrackRow(table, rowOffset, buffer, columnsToTake)
-                : CrackRow(table, rowOffset, buffer, columnsToTake);
+                ? CrackRow(table, rowOffset, buffer.Span, columnsToTake)
+                : CrackRow(table, rowOffset, buffer.Span, columnsToTake);
         }
     }
-
+#warning todo add async
     internal IEnumerable<List<IMdbValue>> ReadDataPage(int page, MdbTable table, HashSet<string> columnsToTake)
     {
         // +--------------------------------------------------------------------------+
@@ -532,12 +548,13 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         // | ???? | 2 bytes | offset_row | The record's location on this page         |
         // +--------------------------------------------------------------------------+
 
-        byte[] buffer = new byte[PageSize];
+        using var memoryBuffer = MdbPool.Rent(PageSize);
+        Span<byte> buffer = memoryBuffer.Trimmed;
 
         ReadPageToBuffer(page, buffer, MdbPageType.Data);
         //Header is the first 8 bytes. The first byte is the PageType == 0x02
 
-        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(8));
+        ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer[8..]);
 
         var rowOffsets = GetRowOffsets(numRows, buffer);
 
@@ -546,8 +563,8 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             if (rowOffset.IsDeleted)
                 continue;
             yield return rowOffset.IsLookup
-                ? CrackRow(table, rowOffset, buffer, columnsToTake)
-                : CrackRow(table, rowOffset, buffer, columnsToTake);
+                ? CrackRow(table, rowOffset, memoryBuffer.Trimmed, columnsToTake)
+                : CrackRow(table, rowOffset, memoryBuffer.Trimmed, columnsToTake);
         }
     }
 
@@ -606,7 +623,9 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     private int ReadRowFromLvalPage(int pageNo, int rowNo, Span<byte> oleBuffer)
     {
-        Span<byte> buffer = new byte[PageSize];
+        using var memoryBuffer = MdbPool.Rent(PageSize);
+        Span<byte> buffer = memoryBuffer.Trimmed;
+
         ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
         if (!buffer.Slice(4, 4).SequenceEqual(JetConstants.LvalString))
@@ -628,7 +647,8 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     private (int numRead, int nextPage) ReadRowFromLvalPage2(int pageNo, int rowNo, Span<byte> oleBuffer)
     {
-        Span<byte> buffer = new byte[PageSize];
+        using var memoryBuffer = MdbPool.Rent(PageSize);
+        Span<byte> buffer = memoryBuffer.Trimmed;
         ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
 
         if (!buffer.Slice(4, 4).SequenceEqual(JetConstants.LvalString))

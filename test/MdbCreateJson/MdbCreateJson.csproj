@@ -8,4 +8,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\MdbToolsTests\Databases\Northwind_Modified.2007.accdb">
+      <Link>Databases\Northwind_Modified.2007.accdb</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>True</Visible>
+    </None>
+    <None Include="..\MdbToolsTests\Databases\Northwind_Modified.jet3.mdb">
+      <Link>Databases\Northwind_Modified.jet3.mdb</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Visible>True</Visible>
+    </None>
+
+  </ItemGroup>
 </Project>
