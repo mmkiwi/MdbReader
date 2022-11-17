@@ -10,14 +10,14 @@ using System.Text.Json.Serialization;
 public class MdbBenchmarks
 {
     [Benchmark]
-    public async Task RunJet3() => await Run("Databases/Northwind_Modified.jet3.mdb");
+    public void RunJet3() => Run("Databases/Northwind_Modified.jet3.mdb");
 
-    [Benchmark]
-    public async Task RunJet4() => await Run("Databases/Northwind_Modified.2007.accdb");
+    //[Benchmark]
+    public void RunJet4() => Run("Databases/Northwind_Modified.2007.accdb");
 
-    private async Task Run(string mdbPath)
+    private void Run(string mdbPath)
     {
-        using MdbHandle handle = await MdbHandle.OpenAsync(mdbPath);
+        using MdbHandle handle = MdbHandle.Open(mdbPath);
         using var jsonFile = File.Open($"{mdbPath}.json", FileMode.Create, FileAccess.Write);
         using var w = new Utf8JsonWriter(jsonFile);
 
@@ -39,7 +39,7 @@ public class MdbBenchmarks
                 }
                 w.WriteEndObject();
                 w.WriteStartArray("Rows"u8);
-                await foreach (MdbDataRow row in table.Rows)
+                foreach (MdbDataRow row in table.Rows)
                 {
                     w.WriteStartObject();
                     foreach (var val in row.Values)
@@ -95,7 +95,7 @@ public class MdbBenchmarks
                 return fOle.Value.ReadToEnd();
             }
         }
-        await w.FlushAsync();
-        Console.WriteLine($"Wrote {w.BytesCommitted} bytes");
+        w.Flush();
+        //Console.WriteLine($"Wrote {w.BytesCommitted} bytes");
     }
 }
