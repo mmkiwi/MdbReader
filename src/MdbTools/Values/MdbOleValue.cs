@@ -5,6 +5,7 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace MMKiwi.MdbTools.Values;
 
@@ -18,6 +19,7 @@ namespace MMKiwi.MdbTools.Values;
 /// Referred to in the Access GUI as a OLE column , and as an <c>LONGBINARY</c> in SQL.
 /// </para>
 /// </remarks>
+[DebuggerDisplay("{Column.Name}: [OLE]")]
 public class MdbOleValue : MdbLongValField<MdbLValStream?>, IValueAllowableType
 {
     internal MdbOleValue(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)

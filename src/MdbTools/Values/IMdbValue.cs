@@ -4,6 +4,8 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using System.Diagnostics;
+
 namespace MMKiwi.MdbTools.Values;
 
 /// <summary>

@@ -5,6 +5,7 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace MMKiwi.MdbTools.Values;
 
@@ -17,6 +18,7 @@ namespace MMKiwi.MdbTools.Values;
 /// boolean value is true. <see cref="IMdbValue.IsNull" /> always returns true.
 /// Referred to in the Access GUI as a "Yes/No" column, and as a <c>BIT</c> in SQL.
 /// </remarks>
+[DebuggerDisplay("{Column.Name}: {Value}")]
 public sealed class MdbBoolValue : MdbValue<bool>, IValueAllowableType
 {
     internal MdbBoolValue(MdbColumn column, bool isNull)

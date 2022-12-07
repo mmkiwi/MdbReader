@@ -5,6 +5,7 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text;
 
 namespace MMKiwi.MdbTools.Values;
@@ -23,6 +24,7 @@ namespace MMKiwi.MdbTools.Values;
 /// on <see cref="MdbColumn.ColumnInfo" />
 /// </para>
 /// </remarks>
+[DebuggerDisplay("{Column.Name}: [MEMO]")]
 public class MdbMemoValue : MdbLongValField<StreamReader?>, IValueAllowableType
 {
 

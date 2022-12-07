@@ -7,9 +7,9 @@
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text;
-
 using MMKiwi.MdbTools.Helpers;
 using MMKiwi.MdbTools.Values;
+using Nito.AsyncEx;
 
 namespace MMKiwi.MdbTools;
 
@@ -21,7 +21,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     private MdbHandle(Jet3Reader reader)
     {
         Reader = reader;
-        _userTables = new(GetUserTables, true);
+        _userTables = new(async () => await GetUserTablesAsync(default));
     }
 
     /// <summary>
@@ -129,6 +129,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         return new(new Jet3StreamFactoryReader(streamFactory, db, parentStream));
     }
 
+
     /// <summary>
     /// Opens an Access database using a function that creates streams. This allows for concurrent access on different threads.
     /// </summary>
@@ -182,7 +183,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
 
     public DateTime CreationDate => Reader.Db.CreationDate;
 
-    private ImmutableArray<MdbTable> GetUserTables()
+    /*private ImmutableArray<MdbTable> GetUserTables()
     {
         MdbTable catalogTable = Reader.ReadTableDef(2).Build("MSysObjects", Reader);
 
@@ -197,6 +198,26 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
                         ((MdbLongIntValue.Nullable)r.Values.First(f => f.Column.Name == "Flags")).Value == 0)
             .Select(CreateMdbTableFromRecord)
             .ToImmutableArray();
+    }*/
+
+    private async Task<MdbTables> GetUserTablesAsync(CancellationToken ct)
+    {
+        var tableDef = await Reader.ReadTableDefAsync(2, ct).ConfigureAwait(false);
+        MdbTable catalogTable = tableDef.Build("MSysObjects", Reader);
+
+        var tables = await EnumerateRowsAsync(catalogTable, new HashSet<string>()
+            {
+                "Id",
+                "Name",
+                 "Type",
+                 "Flags"
+            }, ct)
+            .Where(r => ((MdbIntValue.Nullable)r.Values.First(f => f.Column.Name == "Type")).Value == 1 &&
+                        ((MdbLongIntValue.Nullable)r.Values.First(f => f.Column.Name == "Flags")).Value == 0)
+            .Select(CreateMdbTableFromRecord)
+            .ToArrayAsync().ConfigureAwait(false);
+        ImmutableArray<MdbTable> immutTables = Unsafe.As<MdbTable[], ImmutableArray<MdbTable>>(ref tables);
+        return new MdbTables(immutTables);
     }
 
     private MdbTable CreateMdbTableFromRecord(MdbDataRow row)
@@ -238,12 +259,21 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
         }
     }
 
-    private readonly Lazy<ImmutableArray<MdbTable>> _userTables;
+    readonly AsyncLazy<MdbTables> _userTables;
 
     /// <summary>
     /// The tables in the database
     /// </summary>
-    public ImmutableArray<MdbTable> Tables => _userTables.Value;
+    public MdbTables GetTables()
+    {
+        _userTables.Task.Start();
+        return _userTables.Task.Result;
+    }
+
+    public async Task<MdbTables> GetTablesAsync()
+    {
+        return await _userTables;
+    }
 
     /// <inheritdoc/>
     public ValueTask DisposeAsync() => Reader.DisposeAsync();

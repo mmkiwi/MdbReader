@@ -5,6 +5,7 @@
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
 using System.Collections.Immutable;
+using System.Diagnostics;
 
 namespace MMKiwi.MdbTools.Values;
 
@@ -20,6 +21,7 @@ namespace MMKiwi.MdbTools.Values;
 /// This class is used for non-nullable columns only. For nullable columns, use <see cref="Nullable" />
 /// </para>
 /// </remarks>
+[DebuggerDisplay("{Column.Name}: {Value}")]
 public sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
 {
     internal MdbDoubleValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
@@ -49,6 +51,7 @@ public sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
     /// For non-nullable columns, use <see cref="MdbDoubleValue" /> to return a non-nullable value.
     /// </para>
     /// </remarks>
+    [DebuggerDisplay("{Column.Name}: {Value}")]
     public sealed class Nullable : MdbValue<double?>
     {
         internal Nullable(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
