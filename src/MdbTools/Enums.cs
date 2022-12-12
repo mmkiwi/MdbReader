@@ -203,7 +203,7 @@ public enum MdbColumnFlags : byte
 /// <summary>
 /// The type of an index
 /// </summary>
-internal enum MdbIndexType : byte
+public enum MdbIndexType : byte
 {
     /// <summary>
     /// A primary key index

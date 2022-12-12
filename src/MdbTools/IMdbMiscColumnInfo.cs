@@ -6,5 +6,11 @@
 
 namespace MMKiwi.MdbTools;
 
-///
-public interface IMdbMiscColumnInfo { }
+/// <summary>
+/// Parent class for <see cref="MdbDecimalColumnInfo" /> and <see cref="MdbMiscColumnInfo" />, which 
+/// contain extra column information fields for decimal columns and textual columns, respesctively.
+/// </summary>
+public abstract record class MdbMiscColumnInfo
+{
+    internal MdbMiscColumnInfo() {}
+}

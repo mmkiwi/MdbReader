@@ -6,7 +6,7 @@
 
 namespace MMKiwi.MdbTools;
 
-public class MdbRealIndexColumn
+internal class MdbRealIndexColumn
 {
     /// <summary>
     /// The mutable builder for a future MdbRealIndexColumn class.

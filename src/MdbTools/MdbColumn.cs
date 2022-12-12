@@ -17,7 +17,7 @@ namespace MMKiwi.MdbTools;
 [DebuggerDisplay("MdbColumn {Name} {Type}")]
 public sealed record class MdbColumn
 {
-    private MdbColumn(MdbColumnType type, ushort indexIncludingDeleted, ushort offsetVariable, int index, IMdbMiscColumnInfo columnInfo, MdbColumnFlags flags, ushort offsetFixed, ushort length, string name)
+    private MdbColumn(MdbColumnType type, ushort indexIncludingDeleted, ushort offsetVariable, int index, MdbMiscColumnInfo columnInfo, MdbColumnFlags flags, ushort offsetFixed, ushort length, string name)
     {
         Type = type;
         IndexIncludingDeleted = indexIncludingDeleted;
@@ -52,7 +52,7 @@ public sealed record class MdbColumn
     /// <summary>
     /// Miscellaneous column info. This will be a <see cref="MdbDecimalColumnInfo"/>, <see cref="MdbTextColumnInfo"/>, or <see cref="MdbComplexColumnInfo"/>.
     /// </summary>
-    public IMdbMiscColumnInfo ColumnInfo { get; }
+    public MdbMiscColumnInfo ColumnInfo { get; }
 
     /// <summary>
     /// The flags set on the column. Use <see cref="Enum.HasFlag(Enum)" /> to see if the flag is set.
@@ -110,7 +110,7 @@ public sealed record class MdbColumn
                 name: Name);
         }
 
-        private IMdbMiscColumnInfo BuildColumnInfo(Jet3Reader reader)
+        private MdbMiscColumnInfo BuildColumnInfo(Jet3Reader reader)
         {
             if (reader.Db.JetVersion == JetVersion.Jet3)
             {

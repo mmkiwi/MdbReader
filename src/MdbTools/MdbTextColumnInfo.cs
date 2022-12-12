@@ -8,7 +8,11 @@ using System.Text;
 
 namespace MMKiwi.MdbTools;
 
-public record class MdbTextColumnInfo : IMdbMiscColumnInfo
+/// <summary>
+/// Additional column information for textual columns <see cref="MdbColumnType.Text" /> and 
+/// <see cref="MdbColumnType.Memo" /> 
+/// </summary>
+public sealed record class MdbTextColumnInfo : MdbMiscColumnInfo
 {
     internal MdbTextColumnInfo(Jet3Reader reader, ushort collation)
     {
@@ -23,12 +27,23 @@ public record class MdbTextColumnInfo : IMdbMiscColumnInfo
         Encoding = encodings.FirstOrDefault(e => e.CodePage == codePage)?.GetEncoding() ?? reader.Db.Encoding;
     }
 
-    public MdbTextColumnInfo(ushort collation, Encoding encoding)
+    internal MdbTextColumnInfo(ushort collation, Encoding encoding)
     {
         Collation = collation;
         Encoding = encoding;
     }
 
+    /// <summary>
+    /// The collation code for the column. This is based on an LCID (localization id). For instance, English-US is 1033.
+    /// </summary>
+    /// <remarks>
+    /// See <see href="https://learn.microsoft.com/en-us/previous-versions/windows/embedded/ms912047(v=winembedded.10)" />
+    /// for a list of locale IDs
+    /// </remarks>
     public ushort Collation { get; }
+
+    /// <summary>
+    /// The encoding of the column
+    /// </summary>
     public Encoding Encoding { get; }
 }

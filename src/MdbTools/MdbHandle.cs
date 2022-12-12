@@ -10,6 +10,7 @@ using System.Text;
 using MMKiwi.MdbTools.Helpers;
 using MMKiwi.MdbTools.Values;
 using Nito.AsyncEx;
+using Nito.AsyncEx.Synchronous;
 
 namespace MMKiwi.MdbTools;
 
@@ -21,7 +22,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     private MdbHandle(Jet3Reader reader)
     {
         Reader = reader;
-        _userTables = new(async () => await GetUserTablesAsync(default));
+        _userTables = new(async () => await GetUserTablesAsync(default).ConfigureAwait(false));
     }
 
     /// <summary>
@@ -215,7 +216,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
             .Where(r => ((MdbIntValue.Nullable)r.Values.First(f => f.Column.Name == "Type")).Value == 1 &&
                         ((MdbLongIntValue.Nullable)r.Values.First(f => f.Column.Name == "Flags")).Value == 0)
             .Select(CreateMdbTableFromRecord)
-            .ToArrayAsync().ConfigureAwait(false);
+            .ToArrayAsync(cancellationToken: ct).ConfigureAwait(false);
         ImmutableArray<MdbTable> immutTables = Unsafe.As<MdbTable[], ImmutableArray<MdbTable>>(ref tables);
         return new MdbTables(immutTables);
     }
@@ -266,13 +267,15 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// </summary>
     public MdbTables GetTables()
     {
-        _userTables.Task.Start();
-        return _userTables.Task.Result;
+        return _userTables.Task.WaitAndUnwrapException();
     }
 
+    /// <summary>
+    /// The tables in the database
+    /// </summary>
     public async Task<MdbTables> GetTablesAsync()
     {
-        return await _userTables;
+        return await _userTables.ConfigureAwait(false);
     }
 
     /// <inheritdoc/>

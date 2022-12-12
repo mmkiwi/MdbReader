@@ -47,5 +47,8 @@ public class MdbMemoValue : MdbLongValField<StreamReader?>, IValueAllowableType
     /// </summary>
     public static MdbColumnType AllowableType => MdbColumnType.Memo;
 
+    /// <summary>
+    /// The encoding of the text value
+    /// </summary>
     public Encoding Encoding { get; }
 }

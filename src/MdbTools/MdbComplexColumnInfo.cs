@@ -6,7 +6,7 @@
 
 namespace MMKiwi.MdbTools;
 
-public record class MdbComplexColumnInfo : IMdbMiscColumnInfo
+internal record class MdbComplexColumnInfo : MdbMiscColumnInfo
 {
     public MdbComplexColumnInfo(uint tdefPageNo)
     {

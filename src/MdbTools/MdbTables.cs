@@ -1,15 +1,12 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-
-using Nito.AsyncEx;
+using System.Diagnostics.CodeAnalysis;
 
 namespace MMKiwi.MdbTools;
+
+/// <summary>
+/// A collection of <see cref="MdbTable">MdbTables</see> associated with a given <see cref="MdbHandle" />
+/// </summary>
 public class MdbTables : IReadOnlyList<MdbTable>
 {
 
@@ -22,7 +19,12 @@ public class MdbTables : IReadOnlyList<MdbTable>
         Indexes = tables.Select((t, i) => (Table: t, Index: i)).ToImmutableDictionary(kvp => kvp.Table.Name, kvp => kvp.Index);
     }
 
-
+/// <summary>
+/// Determines whether the table exists in the database
+/// </summary>
+/// <param name="tableName">The name of the table (case-sensitive)</param>
+/// <returns>true if the table exists, false otherwise</returns>
+    public bool TableExists(string tableName) => Indexes.ContainsKey(tableName);
 
     /// <inheritdoc/>
     public MdbTable this[int index] => Tables[index];
@@ -38,19 +40,36 @@ public class MdbTables : IReadOnlyList<MdbTable>
     /// <inheritdoc/>
     public IEnumerator<MdbTable> GetEnumerator() => (Tables as IEnumerable<MdbTable>).GetEnumerator();
 
-    /// <inheritdoc/>
-    public bool TryGetValue(string key, out MdbTable value)
+    /// <summary>
+    /// Tries to get a specific table from the database.
+    /// </summary>
+    /// <param name="tableName">The case-sensitive name of the table to return</param>
+    /// <returns>The specified table if it exists in the database, null otherwise.</returns>
+    public MdbTable? TryGetValue(string tableName)
     {
-        var res = Indexes.TryGetValue(key, out int index);
-        value = Tables[index];
-        return res;
+        bool res = Indexes.TryGetValue(tableName, out int index);
+        return res ? Tables[index] : null;
     }
 
-    public MdbTable? TryGetTable(string key)
+    /// <summary>
+    /// Tries to get a specific table from the database.
+    /// </summary>
+    /// <param name="tableName">The case-sensitive name of the table to return</param>
+    /// <param name="mdbTable">When this method returns, contains the specified <see cref="MdbTable" /> or null otherwise.</param>
+    /// <returns>True if the table exists in the database, false otherwise.</returns>
+    public bool TryGetValue([NotNullWhen(true)] string tableName, [MaybeNullWhen(false)] out MdbTable? mdbTable)
     {
-        var res = Indexes.TryGetValue(key, out int index);
-        var value = Tables[index];
-        return res ? value : null;
+        bool res = Indexes.TryGetValue(tableName, out int index);
+        if(res)
+        {
+            mdbTable = Tables[index];
+        }
+        else
+        {
+            mdbTable = null!;
+        }
+
+        return res;
     } 
 
     /// <inheritdoc/>

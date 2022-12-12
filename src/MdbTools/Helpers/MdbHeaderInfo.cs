@@ -4,8 +4,6 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Collections.Immutable;
-using System.Globalization;
 using System.Text;
 
 namespace MMKiwi.MdbTools.Helpers;

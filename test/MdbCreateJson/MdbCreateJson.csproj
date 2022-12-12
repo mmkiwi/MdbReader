@@ -2,6 +2,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MdbTools\MdbTools.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="sharpziplib" Version="1.4.1" />
+  </ItemGroup>
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>

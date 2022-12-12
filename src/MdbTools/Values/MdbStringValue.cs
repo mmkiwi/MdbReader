@@ -6,7 +6,6 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
-using System.Text;
 
 namespace MMKiwi.MdbTools.Values;
 
@@ -64,7 +63,7 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
     /// </summary>
     /// <remarks>
     /// <para>
-    /// The encoding of the text can be retrieved from the <see cref="MdbColumn.Encoding" /> property
+    /// The encoding of the text can be retrieved from the <see cref="MdbTextColumnInfo.Encoding" /> property
     /// on <see cref="MdbValue{TVal}.Column" />
     /// </para>
     /// <para>
@@ -126,7 +125,7 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
         /// </summary>
         /// <remarks>
         /// <para>
-        /// The encoding of the text can be retrieved from the <see cref="MdbColumn.Encoding" /> property
+        /// The encoding of the text can be retrieved from the <see cref="MdbTextColumnInfo.Encoding" /> property
         /// on <see cref="MdbValue{TVal}.Column" />
         /// </para>
         /// <para>

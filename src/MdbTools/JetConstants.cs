@@ -4,8 +4,6 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Diagnostics.Contracts;
-
 namespace MMKiwi.MdbTools;
 
 internal class JetConstants

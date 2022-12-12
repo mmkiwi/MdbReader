@@ -60,8 +60,6 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
 
-    private readonly object _lock = new();
-
     public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbHeaderInfo db, Stream? parentStream) : base(db)
     {
         MdbStreamGemerator = mdbStreamGenerator;
@@ -73,23 +71,22 @@ internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposab
 
     protected override async Task ReadPartialPageToBufferAsync(int pageNo, Memory<byte> buffer, int start, CancellationToken ct)
     {
-        using Stream MdbStream = MdbStreamGemerator();
-        MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
-        await MdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
+        using Stream mdbStream = MdbStreamGemerator();
+        mdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
+        await mdbStream.ReadAsync(buffer, ct).ConfigureAwait(false);
         DecryptPage(pageNo, buffer.Span);
     }
 
     protected override void ReadPartialPageToBuffer(int pageNo, Span<byte> buffer, int start)
     {
-        using Stream MdbStream = MdbStreamGemerator();
-        MdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
-        MdbStream.Read(buffer);
+        using Stream mdbStream = MdbStreamGemerator();
+        mdbStream.Seek(pageNo * PageSize + start, SeekOrigin.Begin);
+        mdbStream.Read(buffer);
         DecryptPage(pageNo, buffer);
     }
 
     public override async ValueTask DisposeAsync()
     {
-
         IsDisposed = true;
         if (ParentStream != null)
         {

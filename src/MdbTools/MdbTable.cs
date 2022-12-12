@@ -16,7 +16,7 @@ namespace MMKiwi.MdbTools;
 [DebuggerDisplay("MdbTable {Name}")]
 public sealed record class MdbTable
 {
-    private MdbTable(string name, int numRows, int nextAutoNum, MdbTableType tableType, ushort maxCols, ushort numVarCols, ushort numColumns, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage, ImmutableArray<MdbColumn> columns, Jet3Reader reader)
+    private MdbTable(string name, int numRows, int nextAutoNum, MdbTableType tableType, ushort maxCols, ushort numVarCols, ushort numColumns, int numIndexes, int numRealIndexes, int usedPagesPtr, int freePagesPtr, int firstPage, ImmutableArray<MdbColumn> columns, Jet3Reader reader, ImmutableArray<MdbIndex> indexes)
     {
         Name = name;
         NumRows = numRows;
@@ -31,6 +31,7 @@ public sealed record class MdbTable
         FreePagesPtr = freePagesPtr;
         FirstPage = firstPage;
         Columns = columns;
+        Indexes = indexes;
         Rows = new MdbRows(reader, this);
     }
 
@@ -106,6 +107,11 @@ public sealed record class MdbTable
     /// </summary>
     public ImmutableArray<MdbColumn> Columns { get; }
 
+    /// <summary>
+    /// The indexes on the table
+    /// </summary>
+    public ImmutableArray<MdbIndex> Indexes { get; }
+
     internal class Builder
     {
         internal Builder() { }
@@ -136,7 +142,7 @@ public sealed record class MdbTable
 
         public MdbTable Build(string name, Jet3Reader reader)
         {
-            if (Columns == null || RealIndices == null | Indices == null)
+            if (Columns == null || RealIndices == null || Indices == null)
                 throw new InvalidOperationException("All objects must be initialized before building table");
 
             return new MdbTable(
@@ -153,6 +159,7 @@ public sealed record class MdbTable
                 freePagesPtr: FreePagesPtr,
                 firstPage: FirstPage,
                 columns: Columns.Select(c=>c.Build(reader)).ToImmutableArray(),
+                indexes: Indices.Select(i=>i.Build()).ToImmutableArray(),
                 reader: reader);
         }
     }

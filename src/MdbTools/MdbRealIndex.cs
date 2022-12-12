@@ -6,7 +6,7 @@
 
 namespace MMKiwi.MdbTools;
 
-public class MdbRealIndex
+internal class MdbRealIndex
 {
     internal class Builder {
         public MdbRealIndexColumn.Builder[] Columns { get; } = new MdbRealIndexColumn.Builder[10];
