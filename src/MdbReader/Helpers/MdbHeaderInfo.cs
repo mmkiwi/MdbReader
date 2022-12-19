@@ -34,7 +34,6 @@ internal record MdbHeaderInfo
     }
 
     static bool s_isRegistered = false;
-
     public JetVersion JetVersion { get; }
     public ushort Collation { get; }
     public Encoding Encoding { get; }

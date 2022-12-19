@@ -10,7 +10,7 @@ namespace MMKiwi.MdbReader;
 
 internal class Jet3FileReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
-    public Jet3FileReader(string filePath, MdbHeaderInfo db) : base(db)
+    public Jet3FileReader(string filePath, MdbReaderOptions options, MdbHeaderInfo db) : base(db, options)
     {
         FilePath = filePath;
         MdbStream = OpenStream();

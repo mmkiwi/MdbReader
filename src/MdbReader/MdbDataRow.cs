@@ -6,6 +6,7 @@
 
 using System.Collections.Immutable;
 
+using MMKiwi.Collections;
 using MMKiwi.MdbReader.Values;
 
 namespace MMKiwi.MdbReader;
@@ -13,19 +14,12 @@ namespace MMKiwi.MdbReader;
 /// <summary>
 /// A row in an Access Database
 /// </summary>
-public sealed record class MdbDataRow
+public sealed class MdbDataRow: ImmutableKeyedCollection<string,IMdbValue>
 {
-
-    internal MdbDataRow(List<IMdbValue> fields)
+    internal MdbDataRow(ImmutableArray<IMdbValue> baseCollection, IEqualityComparer<string>? comparer, int dictionaryCreationThreshold) : base(baseCollection, comparer, dictionaryCreationThreshold)
     {
-        Values = fields.ToImmutableArray();
     }
 
-    /// <summary>
-    /// The values of all columns in the row
-    /// </summary>
-    /// <remarks>
-    /// 
-    /// </remarks>
-    public ImmutableArray<IMdbValue> Values { get; }
+    /// <inheritdocs />
+    protected override string GetKeyForItem(IMdbValue item) => item.Column.Name;
 }

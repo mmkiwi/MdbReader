@@ -6,10 +6,9 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net7.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net7.0;net6.0;netstandard2.1</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>11.0</LangVersion>
     <IsTrimmable>true</IsTrimmable>
     <RootNamespace>MMKiwi.MdbReader</RootNamespace>
@@ -20,6 +19,11 @@
     <FileVersion>$(Version)</FileVersion>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="MMKiwi.Collections" Version="0.1.0-beta" />
+    <PackageReference Include="PolySharp" Version="1.8.1">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="System.Collections.Immutable" Version="7.0.0" Condition="'$(TargetFramework)' != 'net7.0'" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1" />
     <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />

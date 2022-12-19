@@ -16,8 +16,10 @@ namespace MMKiwi.MdbReader;
 
 internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 {
-    protected Jet3Reader(MdbHeaderInfo db)
+    public MdbReaderOptions Options { get; }
+    protected Jet3Reader(MdbHeaderInfo db, MdbReaderOptions options)
     {
+        Options = options;
         Db = db;
         if (db.DbKey == 0)
             DbKey = null;
@@ -713,7 +715,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         public int Length => EndOffset - StartOffset;
     }
 
-    internal MdbTables GetUserTables()
+    internal MdbTables GetUserTables(IEqualityComparer<string> tableNameComparison)
     {
         MdbTable.Builder tableDef = ReadTableDef(2);
         MdbTable catalogTable = tableDef.Build("MSysObjects", this);
@@ -725,15 +727,15 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                  "Type",
                  "Flags"
             })
-            .Where(r => ((MdbIntValue.Nullable)r.Values.First(f => f.Column.Name == "Type")).Value == 1 &&
-                        ((MdbLongIntValue.Nullable)r.Values.First(f => f.Column.Name == "Flags")).Value == 0)
+            .Where(r => ((MdbIntValue.Nullable)r.First(f => f.Column.Name == "Type")).Value == 1 &&
+                        ((MdbLongIntValue.Nullable)r.First(f => f.Column.Name == "Flags")).Value == 0)
             .Select(CreateMdbTableFromRecord)
             .ToImmutableArray();
-        return new MdbTables(tables);
+        return new MdbTables(tables, tableNameComparison);
     }
 
 
-    internal async Task<MdbTables> GetUserTablesAsync(CancellationToken ct)
+    internal async Task<MdbTables> GetUserTablesAsync(IEqualityComparer<string> tableNameComparison, CancellationToken ct)
     {
         var tableDef = await ReadTableDefAsync(2, ct).ConfigureAwait(false);
         MdbTable catalogTable = tableDef.Build("MSysObjects", this);
@@ -745,12 +747,12 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                  "Type",
                  "Flags"
             }, ct)
-            .Where(r => ((MdbIntValue.Nullable)r.Values.First(f => f.Column.Name == "Type")).Value == 1 &&
-                        ((MdbLongIntValue.Nullable)r.Values.First(f => f.Column.Name == "Flags")).Value == 0)
+            .Where(r => ((MdbIntValue.Nullable)r.First(f => f.Column.Name == "Type")).Value == 1 &&
+                        ((MdbLongIntValue.Nullable)r.First(f => f.Column.Name == "Flags")).Value == 0)
             .Select(CreateMdbTableFromRecord)
             .ToArrayAsync(cancellationToken: ct).ConfigureAwait(false);
         ImmutableArray<MdbTable> immutTables = Unsafe.As<MdbTable[], ImmutableArray<MdbTable>>(ref tables);
-        return new MdbTables(immutTables);
+        return new MdbTables(immutTables, tableNameComparison);
     }
 
     internal async IAsyncEnumerable<MdbDataRow> EnumerateRowsAsync(MdbTable table, HashSet<string>? columnsToTake, [EnumeratorCancellation] CancellationToken ct)
@@ -764,7 +766,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             if (page == 0)
                 break;
             await foreach (var row in ReadDataPageAsync(page, table, columnsToTake ?? new(0), ct))
-                yield return new(row);
+                yield return new(row.ToImmutableArray(), Options.TableNameComparison, 10);
         }
     }
 
@@ -780,15 +782,14 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             if (page == 0)
                 break;
             foreach (var row in ReadDataPage(page, table, columnsToTake ?? new(0)))
-                yield return new(row);
+                yield return new(row.ToImmutableArray(), Options.TableNameComparison, 10);
         }
     }
 
     private MdbTable CreateMdbTableFromRecord(MdbDataRow row)
     {
-        var result = row.Values.ToDictionary(field => field.Column!.Name);
-        int id = ((MdbLongIntValue.Nullable)result["Id"]).Value ?? throw new FormatException("Could not get ID of table");
-        string name = ((MdbStringValue.Nullable)result["Name"]).Value ?? throw new FormatException("Could not get Name of table");
+        int id = ((MdbLongIntValue.Nullable)row["Id"]).Value ?? throw new FormatException("Could not get ID of table");
+        string name = ((MdbStringValue.Nullable)row["Name"]).Value ?? throw new FormatException("Could not get Name of table");
         return ReadTableDef(id).Build(name, this);
     }
 

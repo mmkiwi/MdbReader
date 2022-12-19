@@ -104,33 +104,3 @@ namespace MMKiwi.MdbReader.Helpers
 #endif
     }
 }
-#if !NET5_0_OR_GREATER
-namespace System.Diagnostics.CodeAnalysis
-{
-    [ExcludeFromCodeCoverage, DebuggerNonUserCode]
-    internal sealed class MemberNotNullAttribute : Attribute
-    {
-        public MemberNotNullAttribute(string member)
-        {
-            Members = new[] { member };
-        }
-
-        public MemberNotNullAttribute(params string[] members)
-        {
-            Members = members;
-        }
-
-        public string[] Members { get; }
-    }
-
-}
-namespace System.Runtime.CompilerServices
-{
-    using System.Diagnostics;
-    using System.Diagnostics.CodeAnalysis;
-    [ExcludeFromCodeCoverage, DebuggerNonUserCode]
-    internal static class IsExternalInit
-    {
-    }
-}
-#endif

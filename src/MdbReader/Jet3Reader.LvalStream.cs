@@ -45,7 +45,7 @@ internal partial class Jet3Reader
         public int ReadNextData(Span<byte> buffer)
         {
             if (Reader.IsDisposed)
-                throw new ObjectDisposedException($"{nameof(MdbHandle)} has already been disposed");
+                throw new ObjectDisposedException($"{nameof(MdbReader)} has already been disposed");
 
             if (BytesRead >= Length)
                 return 0;

@@ -19,7 +19,7 @@ public class MdbTests
     {
         using (new AssertionScope())
         {
-            await using MdbHandle handle = MdbHandle.Open(mdbPath);
+            await using MdbReader handle = MdbReader.Open(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
             handle.JetVersion.Should().Be(jetVersion);
             handle.Collation.Should().Be(jsonDatabase.Collation);
@@ -36,7 +36,7 @@ public class MdbTests
     {
         using (new AssertionScope())
         {
-            await using MdbHandle handle = await MdbHandle.OpenAsync(mdbPath);
+            await using MdbReader handle = await MdbReader.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
             foreach(var table in handle.Tables)
             {
@@ -57,7 +57,7 @@ public class MdbTests
     [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
     public async Task TestFullEquivalencyAsync(string mdbPath, string jsonPath)
     {
-        await using MdbHandle handle = MdbHandle.Open(mdbPath);
+        await using MdbReader handle = MdbReader.Open(mdbPath);
         Task<MdbJsonDatabase?> deserializeJson = ReadJsonAsync(jsonPath);
 
         MdbJsonDatabase? jsonDatabase = await deserializeJson;
@@ -80,7 +80,7 @@ public class MdbTests
     [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
     public void TestFullEquivalency(string mdbPath, string jsonPath)
     {
-        using MdbHandle handle = MdbHandle.Open(mdbPath);
+        using MdbReader handle = MdbReader.Open(mdbPath);
         MdbJsonDatabase? jsonDatabase = ReadJson(jsonPath);
         jsonDatabase.Should().NotBeNull();
 
@@ -132,7 +132,7 @@ public class MdbTests
         foreach (var row in rows)
         {
             var jsonRow = jsonTable.Rows.Value[i];
-            foreach (var field in row.Values)
+            foreach (var field in row)
             {
                 jsonRow.Should().ContainKey(field.Column.Name);
                 JsonElement jv = jsonRow[field.Column.Name];
@@ -197,7 +197,7 @@ public class MdbTests
         foreach (var row in rows)
         {
             var jsonRow = jsonTable.Rows.Value[i];
-            foreach (var field in row.Values)
+            foreach (var field in row)
             {
                 jsonRow.Should().ContainKey(field.Column.Name);
                 JsonElement jv = jsonRow[field.Column.Name];
@@ -250,7 +250,7 @@ public class MdbTests
         return JsonSerializer.Deserialize(jsonFile, typeof(MdbJsonDatabase), options) as MdbJsonDatabase;
     }
 
-    private record class TableRunInfo(MdbTable Table, MdbJsonDatabase JsonDatabase, MdbHandle Handle)
+    private record class TableRunInfo(MdbTable Table, MdbJsonDatabase JsonDatabase, MdbReader Handle)
     {
     }
 }

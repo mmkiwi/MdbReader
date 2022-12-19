@@ -10,10 +10,9 @@ namespace MMKiwi.MdbReader;
 
 internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
-
     private readonly object _lock = new();
 
-    public Jet3StreamReader(Stream mdbStream, MdbHeaderInfo db, bool disableAsyncForThreadSafety) : base(db)
+    public Jet3StreamReader(Stream mdbStream, MdbReaderOptions options, MdbHeaderInfo db, bool disableAsyncForThreadSafety) : base(db, options)
     {
         MdbStream = mdbStream;
         DisableAsync = disableAsyncForThreadSafety;
@@ -60,7 +59,7 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
 internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
 
-    public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbHeaderInfo db, Stream? parentStream) : base(db)
+    public Jet3StreamFactoryReader(Func<Stream> mdbStreamGenerator, MdbReaderOptions options, MdbHeaderInfo db, Stream? parentStream) : base(db, options)
     {
         MdbStreamGemerator = mdbStreamGenerator;
         ParentStream = parentStream;

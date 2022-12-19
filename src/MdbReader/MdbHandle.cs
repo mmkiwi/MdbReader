@@ -4,26 +4,21 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
 using System.Text;
 
 using MMKiwi.MdbReader.Helpers;
-using MMKiwi.MdbReader.Values;
-
-using Nito.AsyncEx;
-using Nito.AsyncEx.Synchronous;
 
 namespace MMKiwi.MdbReader;
 
 /// <summary>
 /// The handle for an Access *.mdb database
 /// </summary>
-public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
+public sealed partial class MdbReader : IDisposable, IAsyncDisposable
 {
-    private MdbHandle(Jet3Reader reader, MdbTables tables)
+    private MdbReader(Jet3Reader reader, MdbReaderOptions options, MdbTables tables)
     {
         Reader = reader;
+        Options = options;
         Tables = tables;
     }
 
@@ -31,10 +26,11 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// Opens an mdb file on the filesystem.
     /// </summary>
     /// <remarks>
-    /// This method is preferred over <see cref="Open(Stream, bool)" /> because it keeps the file locked to prevent
+    /// This method is preferred over <see cref="Open(Stream, MdbReaderOptions, bool)" /> because it keeps the file locked to prevent
     /// changes by other programs while the handle is open. It also allows safe multi-threaded access asynchronously.
     /// </remarks>
     /// <param name="fileName">The filename to open</param>
+    /// <param name="options">The reading options. If null, <see cref="MdbReaderOptions.Default" /> will be used.</param>
     /// <returns>The handle to the filesystem.</returns>
     /// <throws cref="UnauthorizedAccessException">The caller does not have the required permission.</throws>
     /// <throws cref="ArgumentNullException"><c>fileName</c> is null.</throws>
@@ -43,22 +39,23 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// <throws cref="FileNotFoundException">The file specified in path was not found.</throws>
     /// <throws cref="NotSupportedException"><c>fileName</c> is in an invalid format.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public static MdbHandle Open(string fileName)
+    public static MdbReader Open(string fileName, MdbReaderOptions? options = null)
     {
+        options ??= MdbReaderOptions.Default;
         using FileStream mdbFileStream = File.OpenRead(fileName);
 
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(mdbFileStream);
 
-        Jet3FileReader reader = new(fileName, db);
-        MdbHandle handle = new(reader, reader.GetUserTables());
+        Jet3FileReader reader = new(fileName, options, db);
+        MdbReader handle = new(reader, options, reader.GetUserTables(options.TableNameComparison));
         return handle;
     }
-
 
     /// <summary>
     /// Asynchronously opens an mdb file on the filesystem.
     /// </summary>
     /// <param name="fileName">The filename to open</param>
+    /// <param name="options">The reading options. If null, <see cref="MdbReaderOptions.Default" /> will be used.</param>
     /// <param name="ct">A cancellation token.</param>
     /// <returns>The handle to the filesystem.</returns>
     /// <throws cref="UnauthorizedAccessException">The caller does not have the required permission.</throws>
@@ -68,14 +65,15 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// <throws cref="FileNotFoundException">The file specified in path was not found.</throws>
     /// <throws cref="NotSupportedException"><c>fileName</c> is in an invalid format.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public async static Task<MdbHandle> OpenAsync(string fileName, CancellationToken ct = default)
+    public async static Task<MdbReader> OpenAsync(string fileName, MdbReaderOptions? options = null, CancellationToken ct = default)
     {
+        options ??= MdbReaderOptions.Default;
         using FileStream mdbFileStream = File.OpenRead(fileName);
 
         MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(mdbFileStream, ct).ConfigureAwait(false);
 
-        Jet3FileReader reader = new(fileName, db);
-        MdbHandle handle = new(reader, await reader.GetUserTablesAsync(ct).ConfigureAwait(false));
+        Jet3FileReader reader = new(fileName, options, db);
+        MdbReader handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
         return handle;
     }
 
@@ -83,12 +81,13 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// Uses a stream to open an mdb file.
     /// </summary>
     /// <remarks>
-    /// If possible, use <see cref="Open(string)" /> instead. Because new streams can't be created to access the file,
+    /// If possible, use <see cref="Open(string, MdbReaderOptions)" /> instead. Because new streams can't be created to access the file,
     /// there is no ability to safety have both thread safety and asynchronosity.
     /// </remarks>
     /// <param name="stream">
     /// The stream to use for the MdbFile. <see cref="Stream.CanRead" /> and <see cref="Stream.CanSeek"/> must be true.
     /// </param>
+    /// <param name="options">The reading options. If null, <see cref="MdbReaderOptions.Default" /> will be used.</param>
     /// <param name="disableAsyncForThreadSafety">
     /// If true, all *Async operations will run asynchronously. When this is true, this method is not thread-safe since
     /// the stream cannot be locked and can be edited by multiple threads.
@@ -100,8 +99,9 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// <throws cref="ArgumentException">Thrown if the stream doesn't support <see cref="Stream.CanSeek">seeking</see>
     /// or <see cref="Stream.CanRead">reading</see>.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public static MdbHandle Open(Stream stream, bool disableAsyncForThreadSafety = false)
+    public static MdbReader Open(Stream stream, MdbReaderOptions? options = null, bool disableAsyncForThreadSafety = false)
     {
+        options ??= MdbReaderOptions.Default;
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
         if (!stream.CanSeek || !stream.CanRead)
@@ -109,8 +109,8 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
 
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
 
-        var reader = new Jet3StreamReader(stream, db, disableAsyncForThreadSafety);
-        MdbHandle handle = new(reader, reader.GetUserTables());
+        var reader = new Jet3StreamReader(stream, options, db, disableAsyncForThreadSafety);
+        MdbReader handle = new(reader, options, reader.GetUserTables(options.TableNameComparison));
         return handle;
     }
 
@@ -118,6 +118,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// Opens an Access database using a function that creates streams. This allows for concurrent access on different threads.
     /// </summary>
     /// <param name="streamFactory">A method returning a stream pointing to the database. Must support seeking and reading.</param>
+    /// <param name="options">The reading options</param>
     /// <param name="parentStream">
     /// A parent stream. Set this if you wnat to keep a handle open to the file and prevent other processes from writing to it.
     /// </param>
@@ -126,8 +127,10 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// <throws cref="ArgumentException">Thrown if the stream doesn't support <see cref="Stream.CanSeek">seeking</see>
     /// or <see cref="Stream.CanRead">reading</see>.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public static MdbHandle Open(Func<Stream> streamFactory, Stream? parentStream = null)
+    public static MdbReader Open(Func<Stream> streamFactory, MdbReaderOptions? options = null, Stream? parentStream = null)
     {
+        options ??= MdbReaderOptions.Default;
+
         if (streamFactory is null)
             throw new ArgumentNullException(nameof(streamFactory));
 
@@ -136,8 +139,8 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
 
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
-        var reader = new Jet3StreamFactoryReader(streamFactory, db, parentStream);
-        MdbHandle handle = new(reader, reader.GetUserTables());
+        var reader = new Jet3StreamFactoryReader(streamFactory, options, db, parentStream);
+        MdbReader handle = new(reader, options, reader.GetUserTables(options.TableNameComparison));
         return handle;
     }
 
@@ -145,6 +148,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// Opens an Access database using a function that creates streams. This allows for concurrent access on different threads.
     /// </summary>
     /// <param name="streamFactory">A method returning a stream pointing to the database. Must support seeking and reading.</param>
+    /// <param name="options">The reading options. If null, <see cref="MdbReaderOptions.Default" /> will be used.</param>
     /// <param name="parentStream">
     /// A parent stream. Set this if you wnat to keep a handle open to the file and prevent other processes from writing to it.
     /// </param>
@@ -154,8 +158,9 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     /// <throws cref="ArgumentException">Thrown if the stream doesn't support <see cref="Stream.CanSeek">seeking</see>
     /// or <see cref="Stream.CanRead">reading</see>.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public async static Task<MdbHandle> OpenAsync(Func<Stream> streamFactory, Stream? parentStream = null, CancellationToken ct = default)
+    public async static Task<MdbReader> OpenAsync(Func<Stream> streamFactory, MdbReaderOptions? options = null, Stream? parentStream = null, CancellationToken ct = default)
     {
+        options ??= MdbReaderOptions.Default;
         if (streamFactory is null)
             throw new ArgumentNullException(nameof(streamFactory));
 
@@ -164,8 +169,8 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
 
         MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(stream, ct).ConfigureAwait(false);
-        var reader = new Jet3StreamFactoryReader(streamFactory, db, parentStream);
-        MdbHandle handle = new(reader, await reader.GetUserTablesAsync(ct).ConfigureAwait(false));
+        var reader = new Jet3StreamFactoryReader(streamFactory, options, db, parentStream);
+        MdbReader handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
         return handle;
     }
 
@@ -216,7 +221,7 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
 
 
     /// <summary>
-    /// 
+    /// The tables in the specified database
     /// </summary>
     public MdbTables Tables { get; }
 
@@ -228,4 +233,9 @@ public sealed partial class MdbHandle : IDisposable, IAsyncDisposable
     public void Dispose() => Reader.Dispose();
 
     internal Jet3Reader Reader { get; }
+
+    /// <summary>
+    /// The options for the specified reader.
+    /// </summary>
+    public MdbReaderOptions Options { get; }
 }

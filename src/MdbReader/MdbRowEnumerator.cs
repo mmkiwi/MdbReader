@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Collections.Immutable;
 
 namespace MMKiwi.MdbReader;
 
@@ -28,7 +29,7 @@ public class MdbRows : IEnumerable<MdbDataRow>, IAsyncEnumerable<MdbDataRow>
             if (page == 0)
                 break;
             await foreach (var row in Reader.ReadDataPageAsync(page, Table, new HashSet<string>(0), ct))
-                yield return new(row);
+                yield return new(row.ToImmutableArray(), Reader.Options.TableNameComparison, 10);
         }
     }
 
@@ -44,7 +45,7 @@ public class MdbRows : IEnumerable<MdbDataRow>, IAsyncEnumerable<MdbDataRow>
             if (page == 0)
                 break;
             foreach (var row in Reader.ReadDataPage(page, Table, new HashSet<string>(0)))
-                yield return new(row);
+                yield return new(row.ToImmutableArray(), Reader.Options.TableNameComparison, 10);
         }
     }
 
