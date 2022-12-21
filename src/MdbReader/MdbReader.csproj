@@ -1,8 +1,11 @@
 <!-- This Source Code Form is subject to the terms of the Mozilla Public
-   - License, v. 2.0. If a copy of the MPL was not distributed with this
-   - file, You can obtain one at https://mozilla.org/MPL/2.0/. 
+   - License, v. 2.0. If a
+copy of the MPL was not distributed with this
+   - file, You can obtain one at
+https://mozilla.org/MPL/2.0/. 
    - 
-   - Based on code from libmdb (https://github.com/mdbtools/mdbtools) -->
+   - Based on code from libmdb
+(https://github.com/mdbtools/mdbtools) -->
 
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -18,15 +21,37 @@
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
   </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>MMKiwi.MdbReader</PackageId>
+    <Version>0.9.0.0-alpha</Version>
+    <Authors>Micah Makaiwi</Authors>
+    <Product>MdbReader</Product>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>access;mdb;database</PackageTags>
+    <Title>Reader for Acces MDB databases</Title>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/mmkiwi/mdbreader</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mmkiwi/mdbreader</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>Copyright Micah Makaiwi 2022</Copyright>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MMKiwi.Collections" Version="0.1.0-beta" />
-    <PackageReference Include="PolySharp" Version="1.8.1">
+    <PackageReference Include="PolySharp" Version="1.8.*">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="7.0.0" Condition="'$(TargetFramework)' != 'net7.0'" />
-    <PackageReference Include="System.Linq.Async" Version="6.0.1" />
-    <PackageReference Include="Nito.AsyncEx" Version="5.1.2" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="7.*"
+      Condition="'$(TargetFramework)' != 'net7.0'" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.*" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 </Project>

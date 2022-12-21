@@ -8,7 +8,7 @@ Currently pre-pre alpha, can read table definition and row values. Loosely based
 
 The library is currently read-only and cannot modify databases at all. It has support for both Jet3 and Jet4-style
 databases. (Any version of access later than 1995). It has not been thoroughly tested and should not be used in
-production code. It features heave use of Span<byte> to ensure that there are no buffer overruns, but it may crash on
+production code. It features heave use of Span&lt;byte&gt; to ensure that there are no buffer overruns, but it may crash on
 some databases.
 
 Indices are not currently supported, but may be at a future time. Indices are not required to read the data in the table.

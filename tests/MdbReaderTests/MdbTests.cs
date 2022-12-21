@@ -1,3 +1,9 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// Based on code from libmdb (https://github.com/mdbtools/mdbtools)
+
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -19,7 +25,7 @@ public class MdbTests
     {
         using (new AssertionScope())
         {
-            await using MdbReader handle = MdbReader.Open(mdbPath);
+            await using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
             handle.JetVersion.Should().Be(jetVersion);
             handle.Collation.Should().Be(jsonDatabase.Collation);
@@ -36,9 +42,9 @@ public class MdbTests
     {
         using (new AssertionScope())
         {
-            await using MdbReader handle = await MdbReader.OpenAsync(mdbPath);
+            await using MdbDatabaseReader handle = await MdbDatabaseReader.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
-            foreach(var table in handle.Tables)
+            foreach (var table in handle.Tables)
             {
                 if (!jsonDatabase.Tables.ContainsKey(table.Name))
                     continue;
@@ -57,7 +63,7 @@ public class MdbTests
     [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
     public async Task TestFullEquivalencyAsync(string mdbPath, string jsonPath)
     {
-        await using MdbReader handle = MdbReader.Open(mdbPath);
+        await using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
         Task<MdbJsonDatabase?> deserializeJson = ReadJsonAsync(jsonPath);
 
         MdbJsonDatabase? jsonDatabase = await deserializeJson;
@@ -80,7 +86,7 @@ public class MdbTests
     [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
     public void TestFullEquivalency(string mdbPath, string jsonPath)
     {
-        using MdbReader handle = MdbReader.Open(mdbPath);
+        using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
         MdbJsonDatabase? jsonDatabase = ReadJson(jsonPath);
         jsonDatabase.Should().NotBeNull();
 
@@ -250,7 +256,7 @@ public class MdbTests
         return JsonSerializer.Deserialize(jsonFile, typeof(MdbJsonDatabase), options) as MdbJsonDatabase;
     }
 
-    private record class TableRunInfo(MdbTable Table, MdbJsonDatabase JsonDatabase, MdbReader Handle)
+    private record class TableRunInfo(MdbTable Table, MdbJsonDatabase JsonDatabase, MdbDatabaseReader Handle)
     {
     }
 }

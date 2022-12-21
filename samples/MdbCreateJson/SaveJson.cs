@@ -1,3 +1,9 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at https://mozilla.org/MPL/2.0/.
+//
+// Based on code from libmdb (https://github.com/mdbtools/mdbtools)
+
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,7 +16,7 @@ if (args.Length != 1)
     Console.WriteLine("Please enter a file path");
     return -1;
 }
-using MdbReader handle = MdbReader.Open(args[0]);
+using MdbDatabaseReader handle = MdbDatabaseReader .Open(args[0]);
 
 var tables = handle.Tables;
 
