@@ -7,7 +7,7 @@ using MMKiwi.Collections;
 namespace MMKiwi.MdbReader;
 
 /// <summary>
-/// A collection of <see cref="MdbTable">MdbTables</see> associated with a given <see cref="MdbReader" />
+/// A collection of <see cref="MdbTable">MdbTables</see> associated with a given <see cref="MdbDatabaseReader" />
 /// </summary>
 public class MdbTables : IReadOnlyList<MdbTable>
 {

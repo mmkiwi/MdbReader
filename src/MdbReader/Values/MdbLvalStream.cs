@@ -11,7 +11,7 @@ namespace MMKiwi.MdbReader.Values;
 /// span more than one page (<see cref="MdbOleValue" /> and <see cref="MdbMemoValue" />).
 /// </summary>
 /// <remarks>
-/// Ensure that the <see cref="MdbReader" /> that the field value was originally 
+/// Ensure that the <see cref="MdbDatabaseReader" /> that the field value was originally 
 /// created with has not been disposed yet. The stream maintains a reference to the handle
 /// and uses its stream to read the file.
 /// </remarks>
@@ -74,7 +74,7 @@ public class MdbLValStream : Stream
     /// <throws cref="ArgumentException">The sum of offset and count is larger than the buffer length.</throws>
     /// <throws cref="ArgumentNullException"><c>buffer</c> is <c>null</c></throws>
     /// <throws cref="ArgumentOutOfRangeException"><c>offset</c> or <c>count</c> is negative.</throws>
-    /// <throws cref="ObjectDisposedException">Methods were called after the <see cref="MdbReader" /> was closed.</throws>
+    /// <throws cref="ObjectDisposedException">Methods were called after the <see cref="MdbDatabaseReader" /> was closed.</throws>
     public override int Read(byte[] buffer, int offset, int count)
     {
         if (buffer is null)
@@ -94,7 +94,7 @@ public class MdbLValStream : Stream
     /// </summary>
     /// <param name="buffer">A region of memory. When this method returns, the contents of this region are replaced by the bytes read from the current source.</param>
     /// <returns>The total number of bytes read into the buffer. This can be less than the number of bytes requested if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.</returns>
-    /// <throws cref="ObjectDisposedException">Methods were called after the <see cref="MdbReader" /> was closed.</throws>
+    /// <throws cref="ObjectDisposedException">Methods were called after the <see cref="MdbDatabaseReader" /> was closed.</throws>
     public override int Read(Span<byte> buffer)
     {
         int numSent = 0;

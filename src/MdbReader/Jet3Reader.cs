@@ -451,7 +451,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             int pageStart = MdbBinary.ReadInt32LittleEndian(map.AsSpan(1));
             BitArray usageBitmap = new(map[5..]);
-            for (int j = startPage > pageStart ? startPage - pageStart + 1 : 0; j < usageBitmap.Length; j++)
+            for (int j = startPage >= pageStart ? startPage - pageStart + 1 : 0; j < usageBitmap.Length; j++)
                 if (usageBitmap[j])
                     return pageStart + j;
             return 0;
@@ -590,20 +590,27 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     private IMdbValue ProcessRow(ReadOnlySpan<byte> region, byte numFixedCols, bool isNull, byte numVarCols, int[] varColOffsets, ref int fixedColsFound, MdbColumn column)
     {
-        if (column.Flags.HasFlag(MdbColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
+        try
         {
-            var field = MdbValueFactory.CreateValue(this, column, isNull, region.Slice(column.OffsetFixed + 1, column.Length).ToImmutableArray());
-            fixedColsFound++;
-            return field;
-        }
-        else if (!column.Flags.HasFlag(MdbColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
-        {
-            var startOffset = varColOffsets[column.OffsetVariable];
-            var endOffset = varColOffsets[column.OffsetVariable + 1];
-            return MdbValueFactory.CreateValue(this, column, isNull, region[startOffset..endOffset].ToImmutableArray());
+            if (column.Flags.HasFlag(MdbColumnFlags.FixedLength) && fixedColsFound < numFixedCols)
+            {
+                var field = MdbValueFactory.CreateValue(this, column, isNull, region.Slice(column.OffsetFixed + 1, column.Length).ToImmutableArray());
+                fixedColsFound++;
+                return field;
+            }
+            else if (!column.Flags.HasFlag(MdbColumnFlags.FixedLength) && column.OffsetVariable < numVarCols)
+            {
+                var startOffset = varColOffsets[column.OffsetVariable];
+                var endOffset = varColOffsets[column.OffsetVariable + 1];
+                return MdbValueFactory.CreateValue(this, column, isNull, region[startOffset..endOffset].ToImmutableArray());
 
+            }
+            return MdbValueFactory.CreateValue(this, column, true, ImmutableArray<byte>.Empty);
         }
-        return MdbValueFactory.CreateValue(this, column, true, ImmutableArray<byte>.Empty);
+        catch
+        {
+            throw;
+        }
     }
 
     private int ReadRowFromLvalPage(int pageNo, int rowNo, Span<byte> oleBuffer)
@@ -668,14 +675,15 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         int[] varColOffsets = new int[numVarCols + 1];
 
         var jumpsUsed = 0;
-
+        ReadOnlySpan<byte> jumpTable = rowRegion.Slice(Index.FromEnd(nullBitmaskSize + numJumps + 1).GetOffset(rowRegion.Length), numJumps);
+        ReadOnlySpan<byte> colTable = rowRegion[(colPtr - numVarCols)..(colPtr + 1)];
         for (int i = 0; i < numVarCols + 1; i++)
         {
-            while (jumpsUsed < numJumps && i == rowRegion[Index.FromEnd(nullBitmaskSize + jumpsUsed + i)])
+            while (jumpsUsed < numJumps && i == jumpTable[^(jumpsUsed + 1)])
             {
                 jumpsUsed++;
             }
-            varColOffsets[i] = rowRegion[colPtr - i] + (jumpsUsed * 256);
+            varColOffsets[i] = colTable[^(i+1)] + (jumpsUsed * 256);
         }
         return varColOffsets;
     }

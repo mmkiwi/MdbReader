@@ -7,7 +7,7 @@
 namespace MMKiwi.MdbReader;
 
 /// <summary>
-/// Provides the ability for the user to define custom behavior for <see cref="MdbReader" />
+/// Provides the ability for the user to define custom behavior for <see cref="MdbDatabaseReader" />
 /// </summary>
 public record class MdbReaderOptions
 {
