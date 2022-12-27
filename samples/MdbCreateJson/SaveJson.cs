@@ -63,7 +63,8 @@ foreach (var tableName in tableNames)
 
 byte[]? ReadOle(MdbOleValue fOle)
 {
-    if (fOle.Value == null) return null;
+    if (fOle.Value == null) 
+        return null;
     using (fOle.Value)
     {
         return fOle.Value.ReadToEnd();
@@ -73,7 +74,8 @@ byte[]? ReadOle(MdbOleValue fOle)
 
 string? ReadMemo(MdbMemoValue fOle)
 {
-    if (fOle.Value == null) return null;
+    if (fOle.Value == null)
+        return null;
     using (fOle.Value)
     {
         return fOle.Value.ReadToEnd();

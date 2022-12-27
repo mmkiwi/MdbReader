@@ -47,7 +47,6 @@ public class MdbLValStream : Stream
     /// </summary>
     public override long Length { get; }
 
-
     private byte[] Buffer { get; }
     private int _position = 0;
     private int _bufferStartPos;
@@ -163,7 +162,6 @@ public class MdbLValStream : Stream
         Read(result.AsSpan());
         return result;
     }
-
 
     /// <summary>
     /// Resets the stream position to zero.

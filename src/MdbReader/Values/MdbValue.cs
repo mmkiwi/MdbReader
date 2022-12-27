@@ -213,5 +213,4 @@ public abstract class MdbValue<TVal> : IMdbValue<TVal>
     /// <param name="v">The value to convert.</param>
     public static implicit operator TVal(MdbValue<TVal> v) => v.Value;
 
-
 }

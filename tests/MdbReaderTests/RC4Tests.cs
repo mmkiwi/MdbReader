@@ -8,7 +8,7 @@ using MMKiwi.MdbReader.Helpers;
 using FluentAssertions;
 namespace MMKiwi.MdbReader.Tests;
 
-public class RC4Tests
+public sealed class RC4Tests
 {
 
     [Theory]

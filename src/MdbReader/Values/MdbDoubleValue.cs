@@ -62,7 +62,6 @@ public sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
         /// </summary>
         public override double? Value => IsNull ? null : ConversionFunctions.AsDouble(BinaryValue.AsSpan());
 
-
         /// <summary>
         /// Implicitly cast a non-nullable <see cref="MdbDoubleValue" /> into a <see cref="Nullable" />
         /// </summary>

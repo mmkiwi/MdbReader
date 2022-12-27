@@ -8,6 +8,8 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
 
+using MMKiwi.MdbReader.Helpers;
+
 namespace MMKiwi.MdbReader.Values;
 
 /// <summary>
@@ -31,7 +33,14 @@ public class MdbMemoValue : MdbLongValField<StreamReader?>, IValueAllowableType
     internal MdbMemoValue(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
         : base(reader, column, isNull, binaryValue, AllowableType)
     {
-        Encoding = (Column.ColumnInfo as MdbTextColumnInfo)!.Encoding;
+        if (BinaryValue.Length > 2 && BinaryValue[0] == 0xff && BinaryValue[1] == 0xfe)
+        {
+            Encoding = Jet4CompressedString.GetForEncoding((column.ColumnInfo as MdbTextColumnInfo)!.Encoding);
+        }
+        else
+        {
+            Encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding; // UCS-2 but UTF-16 should be close enough;
+        }
     }
     /// <summary>
     /// A <see cref="StreamReader" /> wrapping a <see cref="MdbLValStream" /> that gets the 

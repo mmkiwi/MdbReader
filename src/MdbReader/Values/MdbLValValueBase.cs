@@ -24,5 +24,4 @@ public abstract class MdbLongValField<TOut> : MdbValue<TOut>
     }
 
     protected private Jet3Reader Reader { get; }
-
 }

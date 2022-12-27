@@ -16,7 +16,7 @@ using MMKiwi.MdbReader.JsonModel;
 
 namespace MMKiwi.MdbReader.Tests;
 
-public class MdbTests
+public sealed class MdbTests
 {
     [Theory]
     [InlineData("Databases/Northwind_Modified.jet3.mdb", "Databases/Northwind_Modified.jet3.mdb.json", JetVersion.Jet3)]
@@ -25,8 +25,25 @@ public class MdbTests
     {
         using (new AssertionScope())
         {
-            await using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
+            await using MdbDatabaseReader handle = await MdbDatabaseReader.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
+            handle.JetVersion.Should().Be(jetVersion);
+            handle.Collation.Should().Be(jsonDatabase.Collation);
+            handle.Encoding.CodePage.Should().Be(jsonDatabase.CodePage);
+            handle.DbKey.Should().Be(jsonDatabase.DbKey);
+            handle.CreationDate.Should().Be(jsonDatabase.CreateDate);
+        }
+    }
+
+    [Theory]
+    [InlineData("Databases/Northwind_Modified.jet3.mdb", "Databases/Northwind_Modified.jet3.mdb.json", JetVersion.Jet3)]
+    [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json", JetVersion.Access2007)]
+    public void TestFirstPage(string mdbPath, string jsonPath, JetVersion jetVersion)
+    {
+        using (new AssertionScope())
+        {
+            using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
+            MdbJsonDatabase jsonDatabase = ReadJson(jsonPath) ?? throw new Exception();
             handle.JetVersion.Should().Be(jetVersion);
             handle.Collation.Should().Be(jsonDatabase.Collation);
             handle.Encoding.CodePage.Should().Be(jsonDatabase.CodePage);
@@ -44,6 +61,31 @@ public class MdbTests
         {
             await using MdbDatabaseReader handle = await MdbDatabaseReader.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
+            handle.Tables.Count.Should().Be(jsonDatabase.Tables.Count);
+            foreach (var table in handle.Tables)
+            {
+                if (!jsonDatabase.Tables.ContainsKey(table.Name))
+                    continue;
+
+                var jsonTable = jsonDatabase.Tables[table.Name];
+                foreach (var col in table.Columns)
+                {
+                    jsonTable.Columns.Should().ContainKey(col.Name).WhoseValue.Should().Be(col.Type);
+                }
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("Databases/Northwind_Modified.jet3.mdb", "Databases/Northwind_Modified.jet3.mdb.json")]
+    [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
+    public void TestGettingTables(string mdbPath, string jsonPath)
+    {
+        using (new AssertionScope())
+        {
+            using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
+            MdbJsonDatabase jsonDatabase = ReadJson(jsonPath) ?? throw new Exception();
+            handle.Tables.Count.Should().Be(jsonDatabase.Tables.Count);
             foreach (var table in handle.Tables)
             {
                 if (!jsonDatabase.Tables.ContainsKey(table.Name))
@@ -63,7 +105,7 @@ public class MdbTests
     [InlineData("Databases/Northwind_Modified.2007.accdb", "Databases/Northwind_Modified.2007.accdb.json")]
     public async Task TestFullEquivalencyAsync(string mdbPath, string jsonPath)
     {
-        await using MdbDatabaseReader handle = MdbDatabaseReader.Open(mdbPath);
+        await using MdbDatabaseReader handle = await MdbDatabaseReader.OpenAsync(mdbPath);
         Task<MdbJsonDatabase?> deserializeJson = ReadJsonAsync(jsonPath);
 
         MdbJsonDatabase? jsonDatabase = await deserializeJson;

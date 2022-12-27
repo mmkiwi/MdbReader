@@ -4,6 +4,8 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
+using Microsoft.VisualBasic;
+
 namespace MMKiwi.MdbReader;
 
 internal class JetConstants
@@ -15,6 +17,7 @@ internal class JetConstants
         DbPage = new DbPageCosntants(this);
         TablePage = new TablePageConstants(this);
         UsageMap = new UsageMapConstants(this);
+        DataPage = new DataPageConstants(this);
     }
 
     public static class Jet3
@@ -32,11 +35,27 @@ internal class JetConstants
     public DbPageCosntants DbPage { get; }
     public TablePageConstants TablePage { get; }
     public UsageMapConstants UsageMap { get; }
+    public DataPageConstants DataPage { get; }
 
     public static ushort OffsetMask => 0x1fff;
     public static int RowCountOffset => 8;
 
     public static ReadOnlySpan<byte> LvalString => "LVAL"u8;
+
+    internal record class DataPageConstants
+    {
+        public DataPageConstants(JetConstants constants)
+        {
+            Constants = constants;
+            JetVersion = constants.Version;
+        }
+
+        JetConstants Constants { get; }
+        JetVersion JetVersion { get; }
+
+        public Range RecordCount => JetVersion is JetVersion.Jet3 ? 8..10 : 12..14;
+        public int HeaderSize => JetVersion is JetVersion.Jet3 ? 10 : 14;
+    }
 
     internal record class DbPageCosntants
     {

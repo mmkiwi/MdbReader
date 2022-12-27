@@ -6,6 +6,9 @@
 
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
+
+using MMKiwi.MdbReader.Helpers;
 
 namespace MMKiwi.MdbReader.Values;
 
@@ -35,9 +38,19 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
     internal MdbStringValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
         : base(column, isNull, ImmutableArray<byte>.Empty, false, 0, column.Length, AllowableType)
     {
-        var encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding;
-        Value = ConversionFunctions.AsString(encoding, binaryValue.AsSpan());
+        if (BinaryValue.Length > 2 && BinaryValue[0] == 0xff && BinaryValue[1] == 0xfe)
+        {
+            Encoding = Jet4CompressedString.GetForEncoding((column.ColumnInfo as MdbTextColumnInfo)!.Encoding);
+        }
+        else
+        {
+            Encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding; // UCS-2 but UTF-16 should be close enough;
+        }
+
+        Value = ConversionFunctions.AsString(Encoding, binaryValue.AsSpan());
     }
+
+    public Encoding Encoding { get; }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -100,8 +113,16 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
         internal Nullable(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
             : base(column, isNull, ImmutableArray<byte>.Empty, true, 0, column.Length, AllowableType)
         {
-            var encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding;
-            Value = IsNull ? null : ConversionFunctions.AsString(encoding, binaryValue.AsSpan());
+            if (BinaryValue.Length > 2 && BinaryValue[0] == 0xff && BinaryValue[1] == 0xfe)
+            {
+                Encoding = Jet4CompressedString.GetForEncoding((column.ColumnInfo as MdbTextColumnInfo)!.Encoding);
+
+            }
+            else
+            {
+                Encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding; // UCS-2 but UTF-16 should be close enough;
+            }
+            Value = IsNull ? null : ConversionFunctions.AsString(Encoding, binaryValue.AsSpan());
         }
 
         /// <summary>
@@ -139,6 +160,9 @@ public sealed class MdbStringValue : MdbValue<string>, IValueAllowableType
         /// </para>
         /// </remarks>
         public ImmutableArray<byte> RawValue => IsNull ? ImmutableArray<byte>.Empty : BinaryValue;
+
+        public Encoding Encoding { get; }
+
 
         /// <summary>
         /// Implicitly cast a non-nullable <see cref="MdbStringValue" /> into a <see cref="Nullable" />

@@ -219,12 +219,10 @@ public sealed partial class MdbDatabaseReader : IDisposable, IAsyncDisposable
     }*/
 
 
-
     /// <summary>
     /// The tables in the specified database
     /// </summary>
     public MdbTables Tables { get; }
-
 
     /// <inheritdoc/>
     public ValueTask DisposeAsync() => Reader.DisposeAsync();

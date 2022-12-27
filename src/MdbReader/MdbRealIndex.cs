@@ -15,6 +15,4 @@ internal class MdbRealIndex
         public ushort Flags { get; set; }
         public int NumIndexRows { get; set; }
     }
-
-
 }

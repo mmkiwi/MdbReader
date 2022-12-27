@@ -158,7 +158,7 @@ public sealed record class MdbTable
                 usedPagesPtr: UsedPagesPtr,
                 freePagesPtr: FreePagesPtr,
                 firstPage: FirstPage,
-                columns: Columns.Select(c=>c.Build(reader)).ToImmutableArray(),
+                columns: Columns.Select(c=>c.Build(reader)).OrderBy(c=>c.IndexIncludingDeleted).ToImmutableArray(),
                 indexes: Indices.Select(i=>i.Build()).ToImmutableArray(),
                 reader: reader);
         }

@@ -14,10 +14,10 @@ namespace MMKiwi.MdbReader;
 /// </summary>
 public sealed record class MdbTextColumnInfo : MdbMiscColumnInfo
 {
-    internal MdbTextColumnInfo(Jet3Reader reader, ushort collation)
+    internal MdbTextColumnInfo(Jet3Reader reader, ushort collation, Encoding? overrideEncoding)
     {
         Collation = collation;
-        Encoding = reader.Db.Encoding;
+        Encoding = overrideEncoding ?? reader.Db.Encoding;
     }
 
     internal MdbTextColumnInfo(Jet3Reader reader, ushort collation, ushort codePage)

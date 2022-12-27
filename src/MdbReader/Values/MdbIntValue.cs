@@ -54,7 +54,7 @@ public sealed class MdbIntValue : MdbValue<short>, IValueAllowableType
     /// </para>
     /// </remarks>
     [DebuggerDisplay("{Column.Name}: {Value}")]
-    public sealed class Nullable : MdbValue<int?>
+    public sealed class Nullable : MdbValue<short?>
     {
         internal Nullable(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
             : base(column, isNull, binaryValue, true, 2, 2, AllowableType) { }
@@ -63,7 +63,7 @@ public sealed class MdbIntValue : MdbValue<short>, IValueAllowableType
         /// The value for the specific row and column. A <see cref="Nullable{T}">nullable</see>
         /// <see cref="short" /> (values from -32768 to 32767).
         /// </summary>
-        public override int? Value => IsNull ? null : ConversionFunctions.AsShort(BinaryValue.AsSpan());
+        public override short? Value => IsNull ? null : ConversionFunctions.AsShort(BinaryValue.AsSpan());
 
         /// <summary>
         /// Implicitly cast a non-nullable <see cref="MdbIntValue" /> into a <see cref="Nullable" />

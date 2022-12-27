@@ -4,8 +4,8 @@
 //
 // Based on code from libmdb (https://github.com/mdbtools/mdbtools)
 
-using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Text;
 
 using MMKiwi.MdbReader.Helpers;
 
@@ -85,17 +85,18 @@ public sealed record class MdbColumn
         public ushort NumInclDeleted { get; set; }
         public ushort OffsetVariable { get; set; }
         public ushort ColNum { get; set; }
-        public ImmutableArray<byte> Misc { get; set; }
+        public byte[]? Misc { get; set; }
         public MdbColumnFlags Flags { get; set; }
         public ushort OffsetFixed { get; set; }
         public ushort Length { get; set; }
         public string? Name { get; set; }
         public int UsedPages { get; set; }
         public int FreePages { get; set; }
+        public Encoding? OverrideEncoding { get; internal set; }
 
         public MdbColumn Build(Jet3Reader reader)
         {
-            if (Name == null)
+            if (Name == null || Misc == null)
                 throw new InvalidOperationException("All values must be initialized before building MdbColumn");
 
             return new MdbColumn(
@@ -130,7 +131,7 @@ public sealed record class MdbColumn
                 if (Type is MdbColumnType.Text or MdbColumnType.Memo)
                 {
                     return new MdbTextColumnInfo(reader, 
-                        MdbBinary.ReadUInt16LittleEndian(Misc.AsSpan()[..2]));
+                        MdbBinary.ReadUInt16LittleEndian(Misc.AsSpan()[..2]), OverrideEncoding);
                 }
                 else if (Type is MdbColumnType.Complex)
                 {

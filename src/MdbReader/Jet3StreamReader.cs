@@ -55,7 +55,6 @@ internal class Jet3StreamReader : Jet3Reader, IDisposable, IAsyncDisposable
     }
 }
 
-
 internal class Jet3StreamFactoryReader : Jet3Reader, IDisposable, IAsyncDisposable
 {
 
