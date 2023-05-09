@@ -1,0 +1,3 @@
+#### Analyzers ####
+[*.{cs,vb}]
+dotnet_diagnostic.CA2007.severity = none

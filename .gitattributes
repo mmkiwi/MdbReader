@@ -1,0 +1,12 @@
+*.cs      text eol=lf diff=csharp
+*.csproj  text eol=lf
+*.sln     text eol=lf
+*.json    text eol=lf
+*.md      text eol=lf
+*.sql     text eol=lf
+*.json    text eol=lf
+*.txt eol=lf
+
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+.editorconfig  text eol=lf

@@ -1,0 +1,11 @@
+{
+  "Categories": [ "CategoryID" ],
+  "Customers": [ "CustomerID" ],
+  "Employees": ["EmployeeID"],
+  "Order Details": [ "OrderID", "ProductID" ],
+  "Orders": [ "OrderID" ],
+  "Products": [ "ProductID" ],
+  "Shippers": [ "ShipperID" ],
+  "Suppliers": [ "SupplierID" ],
+  "TestAllFieldTypes":  ["Id"]
+}

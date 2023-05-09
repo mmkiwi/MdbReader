@@ -1,0 +1,59 @@
+﻿<!-- This file is part of MdbReader. Licensed under the LGPL version 2.0.
+     You should have received a coy of the GNU LGPL version along with this
+     program. If not, see https://www.gnu.org/licenses/old-licenses/lgpl-2.0.html
+     
+     Copyright Micah Makaiwi.
+     Based on code from libmdb (https://github.com/mdbtools/mdbtools) -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net7.0;net6.0;netstandard2.1</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>11.0</LangVersion>
+    <IsTrimmable>true</IsTrimmable>
+    <RootNamespace>MMKiwi.MdbReader</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TrimmerDefaultAction>link</TrimmerDefaultAction>
+    <Version>0.1.0</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <AssemblyName>$(RootNamespace)</AssemblyName>
+    <FileVersion>$(Version)</FileVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PackageId>MMKiwi.MdbReader</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Micah Makaiwi</Authors>
+    <Product>MdbReader</Product>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>access;mdb;database</PackageTags>
+    <Title>Reader for Acces MDB databases</Title>
+    <PackageLicenseExpression>LGPL-2.0-only</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/mmkiwi/mdbreader</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/mmkiwi/mdbreader</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <Copyright>Copyright Micah Makaiwi 2022</Copyright>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MMKiwi.Collections" Version="0.2.*" />
+    <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta07" PrivateAssets="all" ExcludeAssets="runtime">
+      <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="PolySharp" Version="1.13.*">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="7.*" Condition="'$(TargetFramework)' != 'net7.0'" />
+    <PackageReference Include="System.Linq.Async" Version="6.0.*" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\LICENSE.md" Pack="true" PackagePath="" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+</Project>

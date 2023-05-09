@@ -1,0 +1,78 @@
+{
+  "JetVersion": "access2007",
+  "DbKey": 0,
+  "DbPasswd": 0,
+  "CreateDate": "2022-12-27T10:53:35.2770002",
+  "CodePage": 1252,
+  "Collation": 1033,
+  "Tables": {
+    "TestText": {
+      "Columns": {
+        "ID": "longInt",
+        "TestTextCompressed": "text",
+        "TestMemoCompressed": "memo",
+        "TestTextUncompressed": "text",
+        "TestMemoUncompressed": "memo",
+        "Note": "text"
+      },
+      "Rows": [
+        {
+          "ID": 2,
+          "TestTextCompressed": "Lorem ipsùm dolor sït amet, ad mél fierent luçiliûs.",
+          "TestMemoCompressed": "Lorem ipsùm dolor sït amet, ad mél fierent luçiliûs.",
+          "TestTextUncompressed": "Lorem ipsùm dolor sït amet, ad mél fierent luçiliûs.",
+          "TestMemoUncompressed": "Lorem ipsùm dolor sït amet, ad mél fierent luçiliûs.",
+          "Note": "Short text w/ Latin-1 diacritics"
+        },
+        {
+          "ID": 3,
+          "TestTextCompressed": "Lorem ipsum dolor sit amet, qui porro dicat intellegam an.",
+          "TestMemoCompressed": "Lorem ipsum dolor sit amet, qui porro dicat intellegam an.",
+          "TestTextUncompressed": "Lorem ipsum dolor sit amet, qui porro dicat intellegam an.",
+          "TestMemoUncompressed": "Lorem ipsum dolor sit amet, qui porro dicat intellegam an.",
+          "Note": "ASCII Text"
+        },
+        {
+          "ID": 4,
+          "TestTextCompressed": "Lorem ıpsum dölör sit amet, vis ad eros graeçi detərruışset,",
+          "TestMemoCompressed": "Lorem ıpsum dölör sit amet, vis ad eros graeçi detərruışset,",
+          "TestTextUncompressed": "Lorem ıpsum dölör sit amet, vis ad eros graeçi detərruışset,",
+          "TestMemoUncompressed": "Lorem ıpsum dölör sit amet, vis ad eros graeçi detərruışset,",
+          "Note": "Short text w/ text outside latin-1"
+        },
+        {
+          "ID": 1,
+          "TestTextCompressed": "✔️☝☝🏾",
+          "TestMemoCompressed": "✔️☝☝🏾",
+          "TestTextUncompressed": "✔️☝☝🏾",
+          "TestMemoUncompressed": "✔️☝☝🏾",
+          "Note": "Emoji"
+        },
+        {
+          "ID": 7,
+          "TestTextCompressed": "写援攻学解退登込者逆上受It's OK若村忘抱桜",
+          "TestMemoCompressed": "写援攻学解退登込者逆上受It's OK若村忘抱桜",
+          "TestTextUncompressed": "写援攻学解退登込者逆上受It's OK若村忘抱桜",
+          "TestMemoUncompressed": "写援攻学解退登込者逆上受It's OK若村忘抱桜",
+          "Note": "Chinese mixed with ASCII"
+        },
+        {
+          "ID": 5,
+          "TestTextCompressed": "Лорем ипсум долор сит амет, не вереар инвенире инимицус сед.",
+          "TestMemoCompressed": "Лорем ипсум долор сит амет, не вереар инвенире инимицус сед.",
+          "TestTextUncompressed": "Лорем ипсум долор сит амет, не вереар инвенире инимицус сед.",
+          "TestMemoUncompressed": "Лорем ипсум долор сит амет, не вереар инвенире инимицус сед.",
+          "Note": "Cyrillic"
+        },
+        {
+          "ID": 6,
+          "TestTextCompressed": "写援攻学解退登込者逆上受若村忘抱桜",
+          "TestMemoCompressed": "写援攻学解退登込者逆上受若村忘抱桜",
+          "TestTextUncompressed": "写援攻学解退登込者逆上受若村忘抱桜",
+          "TestMemoUncompressed": "写援攻学解退登込者逆上受若村忘抱桜",
+          "Note": "Chinese"
+        }
+      ]
+    }
+  }
+}
