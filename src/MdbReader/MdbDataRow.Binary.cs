@@ -26,18 +26,18 @@ public sealed partial class MdbDataRow
         _ => ThrowInvalidCast<byte[]>(fieldValue, "binary value")
     };
 
-    private static async Task<byte[]> GetByteArrayAsync(IMdbValue fieldValue, int maxSize) => fieldValue switch
+    private static Task<byte[]> GetByteArrayAsync(IMdbValue fieldValue, int maxSize) => fieldValue switch
     {
         MdbBinaryValue binaryValue => binaryValue.Value.Length <= maxSize
-            ? binaryValue.Value.ToArray()
+            ? Task.FromResult(binaryValue.Value.ToArray())
             : throw new OverflowException($"Binary size {binaryValue.Value.Length} exceeds {maxSize} bytes"),
         MdbMemoValue memoValue => memoValue.Value!.Length <= maxSize
-            ? await memoValue.Value!.ReadToEndAsync().ConfigureAwait(false)
+            ? memoValue.Value!.ReadToEndAsync()
             : throw new OverflowException($"Binary size {memoValue.Value.Length} exceeds {maxSize} bytes"),
         MdbOleValue oleValue => oleValue.Value!.Length <= maxSize
-            ? await oleValue.Value!.ReadToEndAsync().ConfigureAwait(false)
+            ? oleValue.Value!.ReadToEndAsync()
             : throw new OverflowException($"Binary size {oleValue.Value.Length} exceeds {maxSize} bytes"),
-        _ => ThrowInvalidCast<byte[]>(fieldValue, "binary value")
+        _ => Task.FromResult(ThrowInvalidCast<byte[]>(fieldValue, "binary value"))
     };
 
     /// <summary>
@@ -199,11 +199,11 @@ public sealed partial class MdbDataRow
     /// <throws cref="IndexOutOfRangeException">The index passed was outside of the range of 0 through <see cref="FieldCount" />.</throws>
     /// <throws cref="InvalidCastException">The specified cast is not valid, or the underlying value is <c>null</c></throws>
     /// <throws cref="OverflowException">The size of the value exceeds <c>maxSize</c></throws>
-    public async Task<byte[]> GetBytesAsync(int index, int maxSize = int.MaxValue)
+    public Task<byte[]> GetBytesAsync(int index, int maxSize = int.MaxValue)
     {
         var fieldValue = GetFieldValue(index);
         ThrowIfNullCast(fieldValue, "binary value");
-        return await GetByteArrayAsync(fieldValue, maxSize).ConfigureAwait(false);
+        return GetByteArrayAsync(fieldValue, maxSize);
     }
 
     /// <summary>
@@ -232,11 +232,11 @@ public sealed partial class MdbDataRow
     /// <throws cref="ArgumentNullException"><c>columnName</c> is <c>null</c>.</throws>
     /// <throws cref="IndexOutOfRangeException">No column with the specified name was found.</throws>
     /// <throws cref="OverflowException">The size of the value exceeds <c>maxSize</c></throws>
-    public async Task<byte[]> GetBytesAsync(string columnName, int maxSize = int.MaxValue)
+    public Task<byte[]> GetBytesAsync(string columnName, int maxSize = int.MaxValue)
     {
         var fieldValue = GetFieldValue(columnName);
         ThrowIfNullCast(fieldValue, "binary value");
-        return await GetByteArrayAsync(fieldValue, maxSize).ConfigureAwait(false);
+        return GetByteArrayAsync(fieldValue, maxSize);
     }
 }
 
