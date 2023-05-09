@@ -25,11 +25,14 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             MdbBinary.WriteInt32LittleEndian(DbKey, db.DbKey);
     }
 
-    public static MdbHeaderInfo GetDatabaseInfo(Stream mdbStream)
+    public static void ValidateDatabase(Stream mdbStream)
     {
         if (mdbStream.Length < JetConstants.Jet3.PageSize * 3)
             throw new InvalidDataException("File is not JET database. File too short.");
+    }
 
+    public static MdbHeaderInfo GetDatabaseInfo(Stream mdbStream)
+    {
         byte[] header = new byte[JetConstants.Jet3.PageSize];
         mdbStream.Seek(0, SeekOrigin.Begin);
         mdbStream.Read(header);
@@ -39,9 +42,6 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     public static async Task<MdbHeaderInfo> GetDatabaseInfoAsync(Stream mdbStream, CancellationToken ct)
     {
-        if (mdbStream.Length < JetConstants.Jet3.PageSize * 3)
-            throw new InvalidDataException("File is not JET database. File too short.");
-
         byte[] header = new byte[JetConstants.Jet3.PageSize];
         mdbStream.Seek(0, SeekOrigin.Begin);
 
@@ -431,7 +431,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[PageSize];
-                await ReadPageToBufferAsync(mapPage, buffer, MdbPageType.PageUseageBitmap, ct);
+                await ReadPageToBufferAsync(mapPage, buffer, MdbPageType.PageUseageBitmap, ct).ConfigureAwait(false);
 
                 BitArray usageBitmap = new(buffer[4..]);
 
@@ -748,7 +748,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
     [DebuggerDisplay("MdbOffset {StartOffset} - {EndOffset} ({Length} bytes)")]
     internal record struct RowOffset(ushort StartOffset, ushort EndOffset, bool IsLookup, bool IsDeleted)
     {
-        public int Length => EndOffset - StartOffset;
+        public readonly int Length => EndOffset - StartOffset;
     }
 
     internal MdbTables GetUserTables(IEqualityComparer<string> tableNameComparison)

@@ -170,13 +170,18 @@ public class MdbLValStream : Stream
     /// </summary>
     /// <returns></returns>
     /// <throws cref="InvalidOperationException">Thrown if a Read() method has already been called.</throws>
-    public async Task<byte[]> ReadToEndAsync()
+    public Task<byte[]> ReadToEndAsync()
     {
         if (Position != 0)
             throw new InvalidOperationException($"Cannot call {nameof(ReadToEnd)} after calling Read methods");
         byte[] result = new byte[Length];
-        await ReadAsync(result.AsMemory()).ConfigureAwait(false);
-        return result;
+        return Impl(result);
+
+        async Task<byte[]> Impl(byte[] result)
+        {
+            await ReadAsync(result.AsMemory()).ConfigureAwait(false);
+            return result;
+        }
     }
 
     /// <summary>

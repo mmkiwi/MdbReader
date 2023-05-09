@@ -44,6 +44,8 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
         options ??= MdbReaderOptions.Default;
         using FileStream mdbFileStream = File.OpenRead(fileName);
 
+        Jet3Reader.ValidateDatabase(mdbFileStream);
+
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(mdbFileStream);
         Jet3FileReader reader = new(fileName, options, db);
         MdbConnection handle = new(reader, options, reader.GetUserTables(options.TableNameComparison));
@@ -64,16 +66,38 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
     /// <throws cref="FileNotFoundException">The file specified in path was not found.</throws>
     /// <throws cref="NotSupportedException"><c>fileName</c> is in an invalid format.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public async static Task<MdbConnection> OpenAsync(string fileName, MdbReaderOptions? options = null, CancellationToken ct = default)
+    public static Task<MdbConnection> OpenAsync(string fileName, MdbReaderOptions? options = null, CancellationToken ct = default)
     {
         options ??= MdbReaderOptions.Default;
-        using FileStream mdbFileStream = File.OpenRead(fileName);
+        FileStream mdbFileStream = File.OpenRead(fileName);
 
-        MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(mdbFileStream, ct).ConfigureAwait(false);
+        try
+        {
+            Jet3Reader.ValidateDatabase(mdbFileStream);
+        }
+        catch
+        {
+            mdbFileStream.Dispose();
+            throw;
+        }
 
-        Jet3FileReader reader = new(fileName, options, db);
-        MdbConnection handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
-        return handle;
+        return Impl(fileName, options, mdbFileStream, ct);
+
+        static async Task<MdbConnection> Impl(string fileName, MdbReaderOptions options, FileStream mdbFileStream, CancellationToken ct)
+        {
+            try
+            {
+                MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(mdbFileStream, ct).ConfigureAwait(false);
+
+                Jet3FileReader reader = new(fileName, options, db);
+                MdbConnection handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
+                return handle;
+            }
+            finally
+            {
+                await mdbFileStream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>
@@ -106,6 +130,8 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
 
+        Jet3Reader.ValidateDatabase(stream);
+
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
 
         var reader = new Jet3StreamReader(stream, options, db, disableAsyncForThreadSafety);
@@ -137,6 +163,8 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
         if (!stream.CanSeek || !stream.CanRead)
             throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
 
+        Jet3Reader.ValidateDatabase(stream);
+
         MdbHeaderInfo db = Jet3Reader.GetDatabaseInfo(stream);
         var reader = new Jet3StreamFactoryReader(streamFactory, options, db, parentStream);
         MdbConnection handle = new(reader, options, reader.GetUserTables(options.TableNameComparison));
@@ -149,7 +177,7 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
     /// <param name="streamFactory">A method returning a stream pointing to the database. Must support seeking and reading.</param>
     /// <param name="options">The reading options. If null, <see cref="MdbReaderOptions.Default" /> will be used.</param>
     /// <param name="parentStream">
-    /// A parent stream. Set this if you wnat to keep a handle open to the file and prevent other processes from writing to it.
+    /// A parent stream. Set this if you want to keep a handle open to the file and prevent other processes from writing to it.
     /// </param>
     /// <param name="ct">A cancellation token.</param>
     /// <returns>An MdbHandle that operates over the specified stream.</returns>
@@ -157,20 +185,42 @@ public sealed partial class MdbConnection : IDisposable, IAsyncDisposable
     /// <throws cref="ArgumentException">Thrown if the stream doesn't support <see cref="Stream.CanSeek">seeking</see>
     /// or <see cref="Stream.CanRead">reading</see>.</throws>
     /// <throws cref="InvalidDataException">The mdb file is not a valid JET version 3 (Access 97) mdb file</throws>
-    public async static Task<MdbConnection> OpenAsync(Func<Stream> streamFactory, MdbReaderOptions? options = null, Stream? parentStream = null, CancellationToken ct = default)
+    public static Task<MdbConnection> OpenAsync(Func<Stream> streamFactory, MdbReaderOptions? options = null, Stream? parentStream = null, CancellationToken ct = default)
     {
         options ??= MdbReaderOptions.Default;
         if (streamFactory is null)
             throw new ArgumentNullException(nameof(streamFactory));
 
-        using var stream = streamFactory();
-        if (!stream.CanSeek || !stream.CanRead)
-            throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
+        var stream = streamFactory();
 
-        MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(stream, ct).ConfigureAwait(false);
-        var reader = new Jet3StreamFactoryReader(streamFactory, options, db, parentStream);
-        MdbConnection handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
-        return handle;
+        try
+        {
+            if (!stream.CanSeek || !stream.CanRead)
+                throw new ArgumentException($"MdbHandle requires a stream that is readable and seekable");
+
+            Jet3Reader.ValidateDatabase(stream);
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
+        }
+        return Impl(streamFactory, options, parentStream, stream, ct);
+
+        static async Task<MdbConnection> Impl(Func<Stream> streamFactory, MdbReaderOptions options, Stream? parentStream, Stream stream, CancellationToken ct)
+        {
+            try
+            {
+                MdbHeaderInfo db = await Jet3Reader.GetDatabaseInfoAsync(stream, ct).ConfigureAwait(false);
+                var reader = new Jet3StreamFactoryReader(streamFactory, options, db, parentStream);
+                MdbConnection handle = new(reader, options, await reader.GetUserTablesAsync(options.TableNameComparison, ct).ConfigureAwait(false));
+                return handle;
+            }
+            finally
+            {
+                await stream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     /// <summary>
