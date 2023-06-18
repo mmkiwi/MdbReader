@@ -34,7 +34,7 @@ public sealed class MdbWindowsTests
 
             using MdbConnection handle = MdbConnection.Open(mdbPath);
 
-            using OleDbConnection connection = new($"Provider={(handle.JetVersion == JetVersion.Jet3 ? "Microsoft.Jet.OLEDB.4.0" : "Microsoft.ACE.OLEDB.12.0")};Data Source={mdbPath}");
+            using OleDbConnection connection = new($"Provider={(handle.JetVersion == JetVersion.Jet3 ? "Microsoft.Jet.OLEDB.4.0" : "Microsoft.ACE.OLEDB.16.0")};Data Source={mdbPath}");
             connection.Open();
 
             var mdbTable = handle.Tables[tableName];

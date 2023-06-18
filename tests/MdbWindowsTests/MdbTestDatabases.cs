@@ -17,7 +17,8 @@ public class MdbTestDatabases : IEnumerable<object[]>
 {
     public IEnumerator<object[]> GetEnumerator()
     {
-        foreach (var dbFile in Directory.GetFiles("Databases", "*.mdb").Union(Directory.GetFiles("Databases", "*.accdb")))
+        string extension = Environment.Is64BitProcess ? "*.accdb" : "*.mdb";
+        foreach (var dbFile in Directory.GetFiles("Databases", extension))
         {
             
             string? schemaFilePath = dbFile + ".schema.json";

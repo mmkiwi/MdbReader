@@ -14,5 +14,6 @@ using System.Runtime.CompilerServices;
 
 [assembly: CLSCompliant(true)]
 [assembly: InternalsVisibleTo("MMKiwi.MdbReader.Tests")]
-[assembly: InternalsVisibleTo("MMKiwi.MdbReader.WindowsTests")]
+[assembly: InternalsVisibleTo("MMKiwi.MdbReader.WindowsTests_x86")]
+[assembly: InternalsVisibleTo("MMKiwi.MdbReader.WindowsTests_x64")]
 [assembly: InternalsVisibleTo("MMKiwi.MdbReader.JsonModel")]
