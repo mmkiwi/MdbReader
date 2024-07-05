@@ -7,7 +7,7 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net7.0;net6.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net8.0;net7.0;net6.0;netstandard2.1</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>11.0</LangVersion>
@@ -23,7 +23,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>MMKiwi.MdbReader</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.1.0-beta1</Version>
     <Authors>Micah Makaiwi</Authors>
     <Product>MdbReader</Product>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -34,7 +34,7 @@
     <PackageProjectUrl>https://github.com/mmkiwi/mdbreader</PackageProjectUrl>
     <RepositoryUrl>https://github.com/mmkiwi/mdbreader</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Copyright>Copyright Micah Makaiwi 2022</Copyright>
+    <Copyright>Copyright Micah Makaiwi 2024</Copyright>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
@@ -43,13 +43,13 @@
     <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta07" PrivateAssets="all" ExcludeAssets="runtime">
       <IncludeAssets>compile; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="PolySharp" Version="1.13.*">
+    <PackageReference Include="PolySharp" Version="1.14.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="7.*" Condition="'$(TargetFramework)' != 'net7.0'" />
+    <PackageReference Include="System.Collections.Immutable" Version="8.0.0" Condition="'$(TargetFramework)' != 'net7.0'" />
     <PackageReference Include="System.Linq.Async" Version="6.0.*" />
-    <PackageReference Include="System.Text.Encoding.CodePages" Version="7.*" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
