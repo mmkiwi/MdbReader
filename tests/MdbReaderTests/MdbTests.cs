@@ -34,7 +34,9 @@ public sealed class MdbTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
+#endif
             await using MdbConnection handle = await MdbConnection.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
             handle.JetVersion.Should().Be(jsonDatabase.JetVersion);
@@ -55,7 +57,9 @@ public sealed class MdbTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
+#endif
             using MdbConnection handle = MdbConnection.Open(mdbPath);
             MdbJsonDatabase jsonDatabase = ReadJson(jsonPath) ?? throw new Exception();
             handle.JetVersion.Should().Be(jsonDatabase.JetVersion);
@@ -76,7 +80,9 @@ public sealed class MdbTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
+#endif
             await using MdbConnection handle = await MdbConnection.OpenAsync(mdbPath);
             MdbJsonDatabase jsonDatabase = await ReadJsonAsync(jsonPath) ?? throw new Exception();
             handle.Tables.Count.Should().Be(jsonDatabase.Tables.Count);
@@ -101,7 +107,9 @@ public sealed class MdbTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
+#endif
             using MdbConnection handle = MdbConnection.Open(mdbPath);
             MdbJsonDatabase jsonDatabase = ReadJson(jsonPath) ?? throw new Exception();
             handle.Tables.Count.Should().Be(jsonDatabase.Tables.Count);
@@ -125,8 +133,9 @@ public sealed class MdbTests
     {
         //using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
-
+#endif
             await using MdbConnection handle = await MdbConnection.OpenAsync(mdbPath);
             Task<MdbJsonDatabase?> deserializeJson = ReadJsonAsync(jsonPath);
 
@@ -150,8 +159,9 @@ public sealed class MdbTests
     {
         //using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
-
+#endif
             using MdbConnection handle = MdbConnection.Open(mdbPath);
             MdbJsonDatabase? jsonDatabase = ReadJson(jsonPath);
             jsonDatabase.Should().NotBeNull();
@@ -173,8 +183,9 @@ public sealed class MdbTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
-
+#endif
             using MdbConnection handle = MdbConnection.Open(mdbPath);
             MdbJsonDatabase? jsonDatabase = ReadJson(jsonPath);
             jsonDatabase.Should().NotBeNull();
