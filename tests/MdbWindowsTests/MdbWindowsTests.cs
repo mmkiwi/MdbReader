@@ -30,7 +30,9 @@ public sealed class MdbWindowsTests
     {
         using (new AssertionScope())
         {
+#if Debug
             Jet3Reader.SetDebugCallback(m => Output.WriteLine(m));
+#endif
 
             using MdbConnection handle = MdbConnection.Open(mdbPath);
 

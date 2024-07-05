@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 # Lock Files
 *.laccdb
 *.ldb
+
+# Rider folder
+.idea/

@@ -633,7 +633,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2));
 
-        int nextStart = rowNo == 0 ? PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2));
+        int nextStart = rowNo == 0 ? PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2)) & JetConstants.OffsetMask;
 
         int length = nextStart - start & JetConstants.OffsetMask;
         int startOffset = start & JetConstants.OffsetMask;
@@ -655,7 +655,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         int start = MdbBinary.ReadUInt16LittleEndian(buffer.Slice(2 + Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2));
 
-        int nextStart = rowNo == 0 ? PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2));
+        int nextStart = rowNo == 0 ? PageSize : MdbBinary.ReadUInt16LittleEndian(buffer.Slice(Db.Constants.TablePage.RowCountOffset + rowNo * 2, 2)) & JetConstants.OffsetMask;
 
         int length = nextStart - start & JetConstants.OffsetMask;
         int startOffset = start & JetConstants.OffsetMask;
