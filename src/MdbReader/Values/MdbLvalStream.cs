@@ -101,7 +101,7 @@ public class MdbLValStream : Stream
         while (numSent < buffer.Length && numSent < Length)
         {
             if (_position >= Length) // At the end
-                return 0;
+                return numSent;
             if (_lengthInBuffer == 0)
             {
                 // First run, lets grab the first portion
