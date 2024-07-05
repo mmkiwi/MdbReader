@@ -110,7 +110,10 @@ public class Jet4CompressedString : Encoding
     {
         if (bytes.Length == 0 || chars.Length == 0)
         {
-            throw new ArgumentException("Must have length greater than zero", nameof(bytes));
+            // In .NET 8, after reaching the end of the stream, there will be a last call of `GetCharsCore` with 0 bytes
+            // return 0 instead of throwing exception
+            // throw new ArgumentException("Must have length greater than zero", nameof(bytes));
+            return 0;
         }
 
         if (bytes.Length < 2 || bytes[0] != 0xff || bytes[1] != 0xfe)
