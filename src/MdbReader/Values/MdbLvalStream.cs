@@ -109,7 +109,7 @@ public class MdbLValStream : Stream
             }
 
             int lengthLeft = _lengthInBuffer - (_position - _bufferStartPos);
-            if (lengthLeft < 0)
+            if (lengthLeft <= 0)
             {
                 // Grab the next page
                 _bufferStartPos = _position;
@@ -117,9 +117,9 @@ public class MdbLValStream : Stream
                 lengthLeft = _lengthInBuffer - (_position - _bufferStartPos);
             }
             int numToSend = Math.Min(buffer.Length - numSent, lengthLeft);
-            Buffer.AsSpan(_position - _bufferStartPos, numToSend).CopyTo(buffer);
+            Buffer.AsSpan(_position - _bufferStartPos, numToSend).CopyTo(buffer.Slice(numSent));
             numSent += numToSend;
-            _position += numSent;
+            _position += numToSend;
         }
 
         return numSent;
