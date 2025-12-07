@@ -26,8 +26,14 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbDateTimeValue : MdbValue<DateTime>, IValueAllowableType
 {
-    internal MdbDateTimeValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 8, 8, AllowableType) { }
+    internal MdbDateTimeValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 8, 8, AllowableType)
+    {
+        if (!isNull)
+        {
+            Value = ConversionFunctions.AsDateTime(binaryValue);
+        }
+    }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -38,6 +44,5 @@ internal sealed class MdbDateTimeValue : MdbValue<DateTime>, IValueAllowableType
     /// <summary>
     /// The value for the specific row and column. A <see cref="DateTime" />.
     /// </summary>
-    public override DateTime Value => ConversionFunctions.AsDateTime(BinaryValue.AsSpan());
-
+    public override DateTime Value { get; }
 }

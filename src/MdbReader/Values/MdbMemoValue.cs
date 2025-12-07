@@ -28,7 +28,7 @@ namespace MMKiwi.MdbReader.Values;
 internal class MdbMemoValue : MdbLongValField<MdbLValStream?>, IValueAllowableType
 {
 
-    internal MdbMemoValue(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
+    internal MdbMemoValue(Jet3Reader reader, MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
         : base(reader, column, isNull, binaryValue, AllowableType)
     {
         Encoding = (column.ColumnInfo as MdbTextColumnInfo)!.Encoding;

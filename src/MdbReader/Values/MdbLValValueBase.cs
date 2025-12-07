@@ -16,11 +16,18 @@ namespace MMKiwi.MdbReader.Values;
 /// </typeparam>
 internal abstract class MdbLongValField<TOut> : MdbValue<TOut>
 {
-    private protected MdbLongValField(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, MdbColumnType allowableType)
+    private protected MdbLongValField(Jet3Reader reader, MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue, MdbColumnType allowableType)
         : base(column, isNull, binaryValue, 0, int.MaxValue, allowableType)
     {
+        if (!isNull)
+        {
+            BinaryValue = binaryValue.ToArray();
+        }
+
         Reader = reader;
     }
 
     protected private Jet3Reader Reader { get; }
+
+    protected ReadOnlyMemory<byte> BinaryValue { get; }
 }

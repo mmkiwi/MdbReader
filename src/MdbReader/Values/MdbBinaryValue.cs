@@ -28,8 +28,11 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbBinaryValue : MdbValue<ImmutableArray<byte>>, IValueAllowableType
 {
-    internal MdbBinaryValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 0, column.Length, AllowableType) { }
+    internal MdbBinaryValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 0, column.Length, AllowableType)
+    {
+        Value = isNull ? ImmutableArray<byte>.Empty : binaryValue.ToImmutableArray();
+    }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -45,5 +48,5 @@ internal sealed class MdbBinaryValue : MdbValue<ImmutableArray<byte>>, IValueAll
     /// Note that if <see cref="MdbColumnFlags.FixedLength" /> is set for <see cref="MdbColumn.Flags" />, 
     /// there may be null bytes appended to the end in order to reach the fixed length.
     /// </remarks>
-    public override ImmutableArray<byte> Value => BinaryValue;
+    public override ImmutableArray<byte> Value { get; }
 }

@@ -24,8 +24,14 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbCurrencyValue : MdbValue<decimal>, IValueAllowableType
 {
-    internal MdbCurrencyValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 8, 8, AllowableType) { }
+    internal MdbCurrencyValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 8, 8, AllowableType)
+    {
+        if (!isNull)
+        {
+            Value = ConversionFunctions.AsCurrency(binaryValue);
+        }
+    }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -36,5 +42,5 @@ internal sealed class MdbCurrencyValue : MdbValue<decimal>, IValueAllowableType
     /// <summary>
     /// The value for the specific row and column. A <see cref="decimal" />.
     /// </summary>
-    public override decimal Value => ConversionFunctions.AsCurrency(BinaryValue.AsSpan());
+    public override decimal Value { get; }
 }

@@ -25,8 +25,14 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
 {
-    internal MdbDoubleValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 8, 8, AllowableType) { }
+    internal MdbDoubleValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 8, 8, AllowableType)
+    {
+        if (!isNull)
+        {
+            Value = ConversionFunctions.AsDouble(binaryValue);
+        }
+    }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -37,6 +43,5 @@ internal sealed class MdbDoubleValue : MdbValue<double>, IValueAllowableType
     /// <summary>
     /// The value for the specific row and column. A <see cref="double" />.
     /// </summary>
-    public override double Value => ConversionFunctions.AsDouble(BinaryValue.AsSpan());
-
+    public override double Value { get; }
 }

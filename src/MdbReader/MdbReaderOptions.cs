@@ -18,6 +18,11 @@ public record class MdbReaderOptions
     public IEqualityComparer<string> TableNameComparison { get; }
 
     /// <summary>
+    /// Gets the minimum number of columns required before a dictionary is created for column lookups.
+    /// </summary>
+    public int RowDictionaryCreationThreshold { get; set; } = 10;
+
+    /// <summary>
     /// Initializes a new instance of <see cref="MdbReaderOptions" />
     /// </summary>
     /// <param name="tableNameComparison">The string comparer to use for table names in the <see cref="MdbTables" /> collection.</param>

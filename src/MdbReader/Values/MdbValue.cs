@@ -163,7 +163,7 @@ internal abstract class MdbValue<TVal> : IMdbValue<TVal>
     /// <item><description>isNull is true but allowNull is false</description></item>
     /// </list>
     /// </exception>
-    private protected MdbValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue, int minLength, int maxLength, MdbColumnType allowableType)
+    private protected MdbValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue, int minLength, int maxLength, MdbColumnType allowableType)
     {
         if (column is null)
             throw new ArgumentNullException(nameof(column));
@@ -175,7 +175,6 @@ internal abstract class MdbValue<TVal> : IMdbValue<TVal>
 
         Column = column;
         IsNull = isNull;
-        BinaryValue = isNull ? ImmutableArray<byte>.Empty : binaryValue;
     }
 
     /// <summary>
@@ -188,8 +187,6 @@ internal abstract class MdbValue<TVal> : IMdbValue<TVal>
     /// </summary>
     [MemberNotNullWhen(false, nameof(Value))]
     public bool IsNull { get; }
-
-    private protected ImmutableArray<byte> BinaryValue { get; }
 
     /// <summary>
     /// The value for the specific row and column, converted from the raw 
