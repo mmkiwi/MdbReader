@@ -15,25 +15,30 @@ namespace MMKiwi.MdbReader;
 /// </summary>
 public sealed partial class MdbDataRow
 {
-    internal MdbDataRow(ImmutableArray<IMdbValue> baseCollection, IEqualityComparer<string>? comparer, int dictionaryCreationThreshold)
+    internal MdbDataRow(ImmutableArray<IMdbValue> baseCollection, IEqualityComparer<string>? comparer, Dictionary<string, int>? columnMap)
     {
-        Fields = new(baseCollection, comparer, dictionaryCreationThreshold);
+        _fields = baseCollection;
+        _comparer = comparer ?? EqualityComparer<string>.Default;
+        _columnMap = columnMap;
     }
 
-    FieldCollection Fields { get; }
-    internal IEnumerable<IMdbValue> FieldValues => Fields.AsEnumerable();
+    private readonly ImmutableArray<IMdbValue> _fields;
+    private readonly IEqualityComparer<string> _comparer;
+    private readonly Dictionary<string, int>? _columnMap;
+
+    internal IEnumerable<IMdbValue> FieldValues => _fields.AsEnumerable();
 
     /// <summary>
     /// The number of columns in the current row. 
     /// </summary>
-    public int FieldCount => Fields.Count;
+    public int FieldCount => _fields.Length;
 
     /// <summary>
     /// Gets the value of the specified column in its native format given the column ordinal.
     /// </summary>
     /// <param name="index">The zero-based column ordinal.</param>
     /// <throws cref="IndexOutOfRangeException">The index passed was outside of the range of 0 through <see cref="FieldCount" />.</throws>
-    public object? this[int index] => Fields[index].Value;
+    public object? this[int index] => _fields[index].Value;
 
     /// <summary>
     /// Gets the value of the specified column in its native format given the column name.
@@ -41,7 +46,7 @@ public sealed partial class MdbDataRow
     /// <param name="columnName">The column name</param>
     /// <throws cref="ArgumentNullException"><c>columnName</c> is <c>null</c>.</throws>
     /// <throws cref="IndexOutOfRangeException"> No column with the specified name was found.</throws>
-    public object? this[string columnName] => Fields[columnName].Value;
+    public object? this[string columnName] => _fields[GetColumnIndex(columnName)].Value;
 
     /// <summary>
     /// Gets a value that indicates whether the column contains non-existent or missing values.
@@ -139,7 +144,7 @@ public sealed partial class MdbDataRow
     /// Returns a list of all the columns in the specified row.
     /// </summary>    
     /// <returns>The <see cref="MdbColumn" /> objects for all fields in the row.</returns>
-    public IEnumerable<MdbColumn> Columns => Fields.Select(f => f.Column);
+    public IEnumerable<MdbColumn> Columns => _fields.Select(f => f.Column);
 
 #warning TODO: Document what types are associated with each column
     /// <summary>
@@ -167,5 +172,30 @@ public sealed partial class MdbDataRow
         var fieldValue = GetFieldValue(columnName);
         if (fieldValue.IsNull) return null;
         return fieldValue.Value;
+    }
+
+    private int GetColumnIndex(string columnName)
+    {
+        if (_columnMap != null)
+        {
+            if (_columnMap.TryGetValue(columnName, out int index))
+            {
+                return index;
+            }
+        }
+        else
+        {
+            for (int i = 0; i < _fields.Length; i++)
+            {
+                var column = _fields[i];
+                string currentName = column.Column.Name;
+                if (_comparer.Equals(columnName, currentName))
+                {
+                    return i;
+                }
+            }
+        }
+
+        throw new IndexOutOfRangeException($"Column {columnName} does not exist.");
     }
 }

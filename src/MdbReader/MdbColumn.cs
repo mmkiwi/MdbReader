@@ -41,7 +41,7 @@ public sealed record class MdbColumn
     /// See <seealso href="https://learn.microsoft.com/en-us/sql/odbc/microsoft/microsoft-access-data-types?view=sql-server-ver16" />
     /// for a list of all SQL data types and their equivalent names in the Access GUI.
     /// </remarks>
-    public string SqlTypeName => (Type, Flags.HasFlag(MdbColumnFlags.FixedLength)) switch
+    public string SqlTypeName => (Type, Flags.HasFlagFast(MdbColumnFlags.FixedLength)) switch
     {
         (MdbColumnType.Boolean, _) => "BIT",
         (MdbColumnType.Byte, _) => "UNSIGNED BYTE",
