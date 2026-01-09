@@ -20,7 +20,7 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: [OLE]")]
 internal class MdbOleValue : MdbLongValField<MdbLValStream?>, IValueAllowableType
 {
-    internal MdbOleValue(Jet3Reader reader, MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
+    internal MdbOleValue(Jet3Reader reader, MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
         : base(reader, column, isNull, binaryValue, AllowableType)
     {
     }

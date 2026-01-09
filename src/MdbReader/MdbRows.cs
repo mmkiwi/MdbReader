@@ -27,11 +27,12 @@ public class MdbRows : IEnumerable<MdbDataRow>, IAsyncEnumerable<MdbDataRow>
     public async IAsyncEnumerator<MdbDataRow> GetAsyncEnumerator(CancellationToken ct = default)
     {
         byte[] usageMap = Reader.ReadUsageMap(Table.UsedPagesPtr);
+        var columnMap = Reader.CreateColumnMap(Table.Columns, null, Reader.Options.TableNameComparison, Reader.Options.RowDictionaryCreationThreshold);
 
         foreach (int page in Reader.GetUsageMap(usageMap))
         {
-            await foreach (var row in Reader.ReadDataPageAsync(page, Table, new HashSet<string>(0), ct))
-                yield return new(row, Reader.Options.TableNameComparison, 10);
+            await foreach (var row in Reader.ReadDataPageAsync(page, Table, null, ct))
+                yield return new(row, Reader.Options.TableNameComparison, columnMap);
         }
     }
 
@@ -39,11 +40,12 @@ public class MdbRows : IEnumerable<MdbDataRow>, IAsyncEnumerable<MdbDataRow>
     public IEnumerator<MdbDataRow> GetEnumerator()
     {
         byte[] usageMap = Reader.ReadUsageMap(Table.UsedPagesPtr);
+        var columnMap = Reader.CreateColumnMap(Table.Columns, null, Reader.Options.TableNameComparison, Reader.Options.RowDictionaryCreationThreshold);
 
         foreach (int page in Reader.GetUsageMap(usageMap))
         {
-            foreach (var row in Reader.ReadDataPage(page, Table, new HashSet<string>(0)))
-                yield return new(row, Reader.Options.TableNameComparison, 10);
+            foreach (var row in Reader.ReadDataPage(page, Table, null))
+                yield return new(row, Reader.Options.TableNameComparison, columnMap);
         }
     }
 

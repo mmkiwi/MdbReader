@@ -13,28 +13,28 @@ internal partial class Jet3Reader
 {
     internal class LvalStream
     {
-        internal LvalStream(Jet3Reader reader, MdbColumn column, ImmutableArray<byte> firstDataPointer)
+        internal LvalStream(Jet3Reader reader, MdbColumn column, ReadOnlyMemory<byte> firstDataPointer)
         {
             Reader = reader;
             Column = column;
             FirstDataPointer = firstDataPointer;
             // if the memo is null, nothing special is needed
-            ReadOnlySpan<byte> binRowRegion = FirstDataPointer.AsSpan();
+            ReadOnlySpan<byte> binRowRegion = FirstDataPointer.Span;
 
             //Zero out the two highest bits on the fourth byte of the int. These flags are used below
             Length = unchecked((int)
                   (MdbBinary.ReadUInt32LittleEndian(binRowRegion)
                 & (BitConverter.IsLittleEndian ? 0b00111111_11111111_11111111_11111111
                                                : 0b11111111_11111111_11111111_00111111)));
-            LvalType = (MdbLvalType)FirstDataPointer[3];
+            LvalType = (MdbLvalType)binRowRegion[3];
             if (!LvalType.HasFlag(MdbLvalType.Inline)) // Memo is stored on Lval Page
             {
-                LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.AsSpan().Slice(4, 4));
+                LvalPointer = MdbBinary.ReadInt32LittleEndian(binRowRegion.Slice(4, 4));
             }
         }
         internal Jet3Reader Reader { get; }
         public MdbColumn Column { get; }
-        private ImmutableArray<byte> FirstDataPointer { get; }
+        private ReadOnlyMemory<byte> FirstDataPointer { get; }
 
         public int Length { get; }
         public MdbLvalType LvalType { get; }
@@ -51,7 +51,7 @@ internal partial class Jet3Reader
 
             if (LvalType.HasFlag(MdbLvalType.Inline)) // 0x80 == 1
             {
-                FirstDataPointer.AsSpan().Slice(12, Length).CopyTo(buffer);
+                FirstDataPointer.Span.Slice(12, Length).CopyTo(buffer);
                 BytesRead += Length;
                 return Length;
             }
@@ -79,7 +79,7 @@ internal partial class Jet3Reader
         {
             if (!LvalType.HasFlag(MdbLvalType.Inline)) // Memo is stored on Lval Page
             {
-                LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.AsSpan().Slice(4, 4));
+                LvalPointer = MdbBinary.ReadInt32LittleEndian(FirstDataPointer.Span.Slice(4, 4));
             }
             BytesRead = 0;
         }

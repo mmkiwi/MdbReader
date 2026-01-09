@@ -23,7 +23,7 @@ namespace MMKiwi.MdbReader.Values;
 internal sealed class MdbBoolValue : MdbValue<bool>, IValueAllowableType
 {
     internal MdbBoolValue(MdbColumn column, bool isNull)
-     : base(column, false, ImmutableArray<byte>.Empty, 0, 0, AllowableType)
+     : base(column, false, default, 0, 0, AllowableType)
     {
         Value = !isNull;
     }

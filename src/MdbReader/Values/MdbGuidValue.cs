@@ -25,8 +25,14 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbGuidValue : MdbValue<Guid>, IValueAllowableType
 {
-    internal MdbGuidValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 16, 16, AllowableType) { }
+    internal MdbGuidValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 16, 16, AllowableType)
+    {
+        if (!isNull)
+        {
+            Value = ConversionFunctions.AsGuid(binaryValue);
+        }
+    }
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
     /// This will always be <see cref="MdbColumnType.Guid" />
@@ -36,6 +42,6 @@ internal sealed class MdbGuidValue : MdbValue<Guid>, IValueAllowableType
     /// <summary>
     /// The value for the specific row and column. A <see cref="Guid" />
     /// </summary>
-    public override Guid Value => ConversionFunctions.AsGuid(BinaryValue.AsSpan());
+    public override Guid Value { get; }
 
 }

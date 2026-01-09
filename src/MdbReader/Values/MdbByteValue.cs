@@ -26,8 +26,14 @@ namespace MMKiwi.MdbReader.Values;
 [DebuggerDisplay("{Column.Name}: {Value}")]
 internal sealed class MdbByteValue : MdbValue<byte>, IValueAllowableType
 {
-    internal MdbByteValue(MdbColumn column, bool isNull, ImmutableArray<byte> binaryValue)
-        : base(column, isNull, binaryValue, 1, 1, AllowableType) { }
+    internal MdbByteValue(MdbColumn column, bool isNull, ReadOnlySpan<byte> binaryValue)
+        : base(column, isNull, binaryValue, 1, 1, AllowableType)
+    {
+        if (!isNull)
+        {
+            Value = ConversionFunctions.AsByte(binaryValue);
+        }
+    }
 
     /// <summary>
     /// The <see cref="MdbColumnType" /> that can be used for this value.
@@ -38,6 +44,5 @@ internal sealed class MdbByteValue : MdbValue<byte>, IValueAllowableType
     /// <summary>
     /// The value for the specific row and column. A <see cref="byte" /> (values from 0 to 255).
     /// </summary>
-    public override byte Value => ConversionFunctions.AsByte(BinaryValue.AsSpan());
-
+    public override byte Value { get; }
 }
