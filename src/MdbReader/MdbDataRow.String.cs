@@ -18,7 +18,6 @@ public sealed partial class MdbDataRow
         _ => ThrowInvalidCast<string>(fieldValue, nameof(String))
     };
 
-
     /// <summary>
     /// Gets the value of the specified column as a string.
     /// </summary>
@@ -101,4 +100,3 @@ public sealed partial class MdbDataRow
         return GetString(fieldValue);
     }
 }
-

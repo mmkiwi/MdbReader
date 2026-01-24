@@ -16,37 +16,23 @@ public class MdbRows : IEnumerable<MdbDataRow>, IAsyncEnumerable<MdbDataRow>
 {
     internal MdbRows(Jet3Reader reader, MdbTable table)
     {
-        Reader = reader;
-        Table = table;
+        _reader = reader;
+        _table = table;
     }
 
-    private Jet3Reader Reader { get; }
-    private MdbTable Table { get; }
+    private readonly Jet3Reader _reader;
+    private readonly MdbTable _table;
 
     /// <inheritdoc/>
-    public async IAsyncEnumerator<MdbDataRow> GetAsyncEnumerator(CancellationToken ct = default)
+    public IAsyncEnumerator<MdbDataRow> GetAsyncEnumerator(CancellationToken ct = default)
     {
-        byte[] usageMap = Reader.ReadUsageMap(Table.UsedPagesPtr);
-        var columnMap = Reader.CreateColumnMap(Table.Columns, null, Reader.Options.TableNameComparison, Reader.Options.RowDictionaryCreationThreshold);
-
-        foreach (int page in Reader.GetUsageMap(usageMap))
-        {
-            await foreach (var row in Reader.ReadDataPageAsync(page, Table, null, ct))
-                yield return new(row, Reader.Options.TableNameComparison, columnMap);
-        }
+        return _reader.EnumerateRowsAsync(_table, null, ct).GetAsyncEnumerator(ct);
     }
 
     /// <inheritdoc/>
     public IEnumerator<MdbDataRow> GetEnumerator()
     {
-        byte[] usageMap = Reader.ReadUsageMap(Table.UsedPagesPtr);
-        var columnMap = Reader.CreateColumnMap(Table.Columns, null, Reader.Options.TableNameComparison, Reader.Options.RowDictionaryCreationThreshold);
-
-        foreach (int page in Reader.GetUsageMap(usageMap))
-        {
-            foreach (var row in Reader.ReadDataPage(page, Table, null))
-                yield return new(row, Reader.Options.TableNameComparison, columnMap);
-        }
+        return _reader.EnumerateRows(_table, null).GetEnumerator();
     }
 
     /// <inheritdoc/>

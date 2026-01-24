@@ -108,4 +108,3 @@ public sealed partial class MdbDataRow
         return fieldValue.IsNull ? null : GetTextReader(fieldValue);
     }
 }
-

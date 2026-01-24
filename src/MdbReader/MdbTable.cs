@@ -33,14 +33,15 @@ public sealed record class MdbTable
         FirstPage = firstPage;
         Columns = columns;
         Indexes = indexes;
-        Rows = new MdbRows(reader, this);
+        _reader = reader;
         RealIndices = realIndices;
     }
 
     /// <summary>
     /// An enumerator for all the rows in the database.
     /// </summary>
-    public MdbRows Rows { get; }
+    public MdbRows Rows => _rows ??= new MdbRows(_reader, this);
+
     internal ImmutableArray<MdbRealIndex> RealIndices { get; }
 
     /// <summary>
@@ -114,6 +115,9 @@ public sealed record class MdbTable
     /// The indexes on the table
     /// </summary>
     public ImmutableArray<MdbIndex> Indexes { get; }
+
+    private readonly Jet3Reader _reader;
+    private MdbRows? _rows;
 
     internal class Builder
     {
