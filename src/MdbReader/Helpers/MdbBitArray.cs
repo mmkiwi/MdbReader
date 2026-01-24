@@ -17,7 +17,13 @@ internal readonly struct MdbBitArray
 
     public MdbBitArray(ReadOnlyMemory<byte> bytes)
     {
-        Length = bytes.Length * 8;
+        int length = bytes.Length;
+        while (bytes.Span[length - 1] == 0 && length > 0)
+        {
+            length--;
+        }
+
+        Length = length * 8;
         _bytes = bytes;
     }
 
@@ -30,7 +36,7 @@ internal readonly struct MdbBitArray
     private bool Get(int index)
     {
         if ((uint)index >= (uint)Length)
-            throw new ArgumentOutOfRangeException(nameof(index), index, "Index was out of range.");
+            return false;
 
         return (_bytes.Span[index >> 3] & (1 << (index % 8))) != 0;
     }

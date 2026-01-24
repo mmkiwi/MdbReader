@@ -525,9 +525,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(Db.Constants.DataPage.RecordCount));
 
-        var rowOffsets = GetRowOffsets(numRows, buffer);
-
-        foreach (var rowOffset in rowOffsets)
+        foreach (var rowOffset in new RowOffsetEnumerable(this, numRows, buffer))
         {
             if (rowOffset.IsDeleted)
                 continue;
@@ -564,9 +562,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
         ushort numRows = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(Db.Constants.DataPage.RecordCount));
 
-        var rowOffsets = GetRowOffsets(numRows, buffer);
-
-        foreach (var rowOffset in rowOffsets)
+        foreach (var rowOffset in new RowOffsetEnumerable(this, numRows, buffer))
         {
             if (rowOffset.IsDeleted)
                 continue;
@@ -632,7 +628,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             {
                 int startOffset = varColOffsets[column.OffsetVariable];
                 int endOffset = varColOffsets[column.OffsetVariable + 1];
-                ReadOnlySpan<byte> dataRegion = region[startOffset..endOffset];
+                var dataRegion = region[startOffset..endOffset];
                 return MdbValueFactory.CreateValue(this, column, isNull, dataRegion);
             }
             return MdbValueFactory.CreateValue(this, column, true, default);
@@ -737,28 +733,70 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         return varColOffsets;
     }
 
-    private RowOffset[] GetRowOffsets(ushort numRows, ReadOnlySpan<byte> buffer)
+    private readonly struct RowOffsetEnumerable
     {
+        private readonly Jet3Reader _reader;
+        private readonly ushort _numRows;
+        private readonly ReadOnlyMemory<byte> _buffer;
+
+        public RowOffsetEnumerable(Jet3Reader reader, ushort numRows, ReadOnlyMemory<byte> buffer)
+        {
+            _reader = reader;
+            _numRows = numRows;
+            _buffer = buffer;
+        }
+
+        public RowOffsetEnumerator GetEnumerator() => new RowOffsetEnumerator(_reader, _numRows, _buffer);
+    }
+
+    private struct RowOffsetEnumerator
+    {
+        private readonly ushort _numRows;
+        private readonly ReadOnlyMemory<byte> _region;
+
+        private int _index;
+        private ushort _previousStartOffset;
+        private readonly ushort _pageSize;
+        
+        public RowOffset Current { get; private set; }
+
+        public RowOffsetEnumerator(Jet3Reader reader, ushort numRows, ReadOnlyMemory<byte> buffer)
+        {
+            _numRows = numRows;
+
         // The high byte is not used to get a row offset (the max row offset in Jet4 is 4096 = 2^12)
         // Offsets that have 0x40 in the high order byte point to a location within the page where a
         // Data Pointer (4 bytes) to another data page (also known as an overflow page) is stored.
         // Offsets that have 0x80 in the high order byte are deleted rows.
-        ReadOnlySpan<byte> region = buffer.Slice(Db.Constants.DataPage.HeaderSize, numRows * 2);
-        RowOffset[] rowOffsets = new RowOffset[numRows];
-        for (int i = 0; i < numRows; i++)
-        {
-            ushort offset = MdbBinary.ReadUInt16LittleEndian(region[(i * 2)..]);
-            rowOffsets[i].StartOffset = unchecked((ushort)(
-                                       offset & 0b0001_1111_1111_1111));
-            rowOffsets[i].IsLookup = (offset & 0b1000_0000_0000_0000) > 0;
-            rowOffsets[i].IsDeleted = (offset & 0b0100_0000_0000_0000) > 0;
+            _region = buffer.Slice(reader.Db.Constants.DataPage.HeaderSize, numRows * 2);
+            _pageSize = reader.PageSize;
 
-            rowOffsets[i].EndOffset = i == 0
-                ? Db.Constants.PageSize
-                : rowOffsets[i - 1].StartOffset;
+            _index = -1;
+            _previousStartOffset = 0;
+            Current = default;
         }
 
-        return rowOffsets;
+        public bool MoveNext()
+        {
+            int nextIndex = _index + 1;
+            if (nextIndex >= _numRows)
+                return false;
+
+            ushort offset = MdbBinary.ReadUInt16LittleEndian(_region.Span[(nextIndex * 2)..]);
+            ushort startOffset = unchecked((ushort)(offset & 0b0001_1111_1111_1111));
+
+            Current = new RowOffset
+        {
+                StartOffset = startOffset,
+                IsLookup = (offset & 0b1000_0000_0000_0000) != 0,
+                IsDeleted = (offset & 0b0100_0000_0000_0000) != 0,
+                EndOffset = nextIndex == 0 ? _pageSize : _previousStartOffset
+            };
+
+            _previousStartOffset = startOffset;
+            _index = nextIndex;
+            return true;
+        }
     }
 
     public bool IsDisposed { get; protected set; }
