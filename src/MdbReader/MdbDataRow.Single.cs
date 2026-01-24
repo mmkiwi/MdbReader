@@ -11,7 +11,6 @@ namespace MMKiwi.MdbReader;
 
 public sealed partial class MdbDataRow
 {
-
     private float GetSingle(IMdbValue fieldValue) => fieldValue switch
     {
         MdbSingleValue singleValue => singleValue.Value,
@@ -96,4 +95,3 @@ public sealed partial class MdbDataRow
         return fieldValue.IsNull ? null : GetSingle(fieldValue);
     }
 }
-

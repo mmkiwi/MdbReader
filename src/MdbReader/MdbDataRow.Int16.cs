@@ -97,5 +97,4 @@ public sealed partial class MdbDataRow
         ThrowIfNullCast(fieldValue, nameof(Int16));
         return GetInt16(fieldValue);
     }
-
 }

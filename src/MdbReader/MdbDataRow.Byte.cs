@@ -11,11 +11,10 @@ namespace MMKiwi.MdbReader;
 
 public sealed partial class MdbDataRow
 {
-
     private static byte GetByte(IMdbValue fieldValue) => fieldValue switch
     {
         MdbByteValue byteValue => byteValue.Value,
-        _ => ThrowInvalidCast<byte>(fieldValue, nameof(Int16))
+        _ => ThrowInvalidCast<byte>(fieldValue, nameof(Byte))
     };
 
     /// <summary>
@@ -35,7 +34,6 @@ public sealed partial class MdbDataRow
         return GetByte(fieldValue);
     }
 
-
     /// <summary>
     /// Gets the value of the specified column as a nullable byte.
     /// </summary>
@@ -53,7 +51,6 @@ public sealed partial class MdbDataRow
         return GetByte(fieldValue);
     }
 
-
     /// <summary>
     /// Gets the value of the specified column as a byte.
     /// </summary>
@@ -70,7 +67,6 @@ public sealed partial class MdbDataRow
         ThrowIfNullCast(fieldValue, nameof(Byte));
         return GetByte(fieldValue);
     }
-
 
     /// <summary>
     /// Gets the value of the specified column as a byte.

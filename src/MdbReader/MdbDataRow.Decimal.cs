@@ -81,6 +81,7 @@ public sealed partial class MdbDataRow
         if (fieldValue.IsNull) return null;
         return GetDecimal(fieldValue);
     }
+
     /// <summary>
     /// Gets the value of the specified column as a nullable decimal.
     /// </summary>
@@ -100,6 +101,4 @@ public sealed partial class MdbDataRow
         if (fieldValue.IsNull) return null;
         return GetDecimal(fieldValue);
     }
-
 }
-

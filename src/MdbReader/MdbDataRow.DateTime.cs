@@ -17,7 +17,6 @@ public sealed partial class MdbDataRow
         _ => ThrowInvalidCast<DateTime>(fieldValue, nameof(DateTime))
     };
 
-
     /// <summary>
     /// Gets the value of the specified column as a nullable DateTime.
     /// </summary>
@@ -86,4 +85,3 @@ public sealed partial class MdbDataRow
         return GetDateTime(fieldValue);
     }
 }
-

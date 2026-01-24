@@ -11,7 +11,6 @@ namespace MMKiwi.MdbReader;
 
 public sealed partial class MdbDataRow
 {
-
     private static byte[] GetByteArray(IMdbValue fieldValue, int maxSize) => fieldValue switch
     {
         MdbBinaryValue binaryValue => binaryValue.Value.Length <= maxSize
@@ -106,8 +105,6 @@ public sealed partial class MdbDataRow
         return GetByteArray(fieldValue, maxSize);
     }
 
-
-
     /// <summary>
     /// Gets the value of the specified column as a nullable byte array.
     /// </summary>
@@ -171,7 +168,6 @@ public sealed partial class MdbDataRow
         var fieldValue = GetFieldValue(columnName);
         return fieldValue == null ? null : GetByteArray(fieldValue, maxSize);
     }
-
 
     /// <summary>
     /// Gets the value of the specified column as a byte array.
@@ -239,4 +235,3 @@ public sealed partial class MdbDataRow
         return GetByteArrayAsync(fieldValue, maxSize);
     }
 }
-

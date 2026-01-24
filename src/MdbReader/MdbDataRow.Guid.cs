@@ -32,7 +32,7 @@ public sealed partial class MdbDataRow
     public Guid GetGuid(int index)
     {
         var fieldValue = GetFieldValue(index);
-        ThrowIfNullCast(fieldValue, nameof(Single));
+        ThrowIfNullCast(fieldValue, nameof(Guid));
         return GetGuid(fieldValue);
     }
 
@@ -51,7 +51,7 @@ public sealed partial class MdbDataRow
     public Guid GetGuid(string columnName)
     {
         var fieldValue = GetFieldValue(columnName);
-        ThrowIfNullCast(fieldValue, nameof(Single));
+        ThrowIfNullCast(fieldValue, nameof(Guid));
         return GetGuid(fieldValue);
     }
 
