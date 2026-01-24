@@ -110,7 +110,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             throw new FormatException($"Incorrect page type on page {pageNo}. (Expected {(byte)pageType}, observed {header})");
     }
 
-    internal Dictionary<string, int>? CreateColumnMap(ImmutableArray<MdbColumn> columns,
+    private Dictionary<string, int>? CreateColumnMap(ImmutableArray<MdbColumn> columns,
         HashSet<string>? columnsToTake,
         IEqualityComparer<string> comparer, int threshold)
     {
@@ -137,12 +137,10 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         return dictionary;
     }
 
-    internal async Task<byte[]> ReadUsageMapAsync(int mapPtr, CancellationToken ct)
+    private async Task<ReadOnlyMemory<byte>> ReadUsageMapAsync(int mapPtr, CancellationToken ct)
     {
         var c = Db.Constants.UsageMap;
         int pageNo = mapPtr >> 8;
-        byte[] x = new byte[4];
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(x, mapPtr);
         byte[] buffer = new byte[PageSize];
 
         await ReadPageToBufferAsync(pageNo, buffer, MdbPageType.Data, ct).ConfigureAwait(false);
@@ -150,7 +148,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(c.RowCount));
         int mapSize = PageSize - rowLocation;
 
-        return buffer.AsSpan(rowLocation, mapSize).ToArray();
+        return buffer.AsMemory(rowLocation, mapSize);
     }
 
     protected virtual void DecryptPage(int pageNo, Span<byte> buffer)
@@ -164,12 +162,10 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         RC4.ApplyInPlace(buffer, pageKey);
     }
 
-    internal byte[] ReadUsageMap(int mapPtr)
+    private ReadOnlyMemory<byte> ReadUsageMap(int mapPtr)
     {
         var c = Db.Constants.UsageMap;
         int pageNo = mapPtr >> 8;
-        byte[] x = new byte[4];
-        System.Buffers.Binary.BinaryPrimitives.WriteInt32LittleEndian(x, mapPtr);
         byte[] buffer = new byte[PageSize];
 
         ReadPageToBuffer(pageNo, buffer, MdbPageType.Data);
@@ -177,7 +173,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         ushort rowLocation = MdbBinary.ReadUInt16LittleEndian(buffer.AsSpan(c.RowCount));
         int mapSize = PageSize - rowLocation;
 
-        return buffer.AsSpan(rowLocation, mapSize).ToArray();
+        return buffer.AsMemory(rowLocation, mapSize);
     }
 
     internal async Task<MdbTable.Builder> ReadTableDefAsync(int startPage, CancellationToken ct)
@@ -438,29 +434,29 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
                 freeSpace);
     }
 
-    internal async IAsyncEnumerable<int> GetUsageMapAsync(byte[] map, [EnumeratorCancellation] CancellationToken ct)
+    private async IAsyncEnumerable<int> GetUsageMapAsync(ReadOnlyMemory<byte> map, [EnumeratorCancellation] CancellationToken ct)
     {
         var c = Db.Constants.UsageMap;
-        if (map[0] == 0) // Type 0 usage map
+        if (map.Span[0] == 0) // Type 0 usage map
         {
-            int pageStart = MdbBinary.ReadInt32LittleEndian(map.AsSpan(1));
-            BitArray usageBitmap = new(map[5..]);
+            int pageStart = MdbBinary.ReadInt32LittleEndian(map.Span[1..]);
+            var usageBitmap = new MdbBitArray(map[5..]);
             for (int j = 0; j < usageBitmap.Length; j++)
                 if (usageBitmap[j])
                     yield return pageStart + j;
         }
-        else if (map[0] == 1)
+        else if (map.Span[0] == 1)
         {
             int maxPages = (map.Length - 1) / 4;
             for (int i = 0; i < maxPages; i++)
             {
-                int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
+                int mapPage = MdbBinary.ReadInt32LittleEndian(map.Span[(i * 4 + 1)..]);
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[PageSize];
                 await ReadPageToBufferAsync(mapPage, buffer, MdbPageType.PageUseageBitmap, ct).ConfigureAwait(false);
 
-                BitArray usageBitmap = new(buffer[4..]);
+                var usageBitmap = new MdbBitArray(buffer[4..]);
 
                 for (int j = 1; j < usageBitmap.Length; j++)
                     if (usageBitmap[j])
@@ -471,29 +467,29 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             throw new FormatException();
     }
 
-    internal IEnumerable<int> GetUsageMap(byte[] map)
+    private IEnumerable<int> GetUsageMap(ReadOnlyMemory<byte> map)
     {
         var c = Db.Constants.UsageMap;
-        if (map[0] == 0) // Type 0 usage map
+        if (map.Span[0] == 0) // Type 0 usage map
         {
-            int pageStart = MdbBinary.ReadInt32LittleEndian(map.AsSpan(1));
-            BitArray usageBitmap = new(map[5..]);
+            int pageStart = MdbBinary.ReadInt32LittleEndian(map.Span[1..]);
+            var usageBitmap = new MdbBitArray(map[5..]);
             for (int j = 0; j < usageBitmap.Length; j++)
                 if (usageBitmap[j])
                     yield return pageStart + j;
         }
-        else if (map[0] == 1)
+        else if (map.Span[0] == 1)
         {
             int maxPages = (map.Length - 1) / 4;
             for (int i = 0; i < maxPages; i++)
             {
-                int mapPage = MdbBinary.ReadInt32LittleEndian(map.AsSpan(i * 4 + 1));
+                int mapPage = MdbBinary.ReadInt32LittleEndian(map.Span[(i * 4 + 1)..]);
                 if (mapPage == 0)
                     continue;
                 byte[] buffer = new byte[PageSize];
                 ReadPageToBuffer(mapPage, buffer, MdbPageType.PageUseageBitmap);
 
-                BitArray usageBitmap = new(buffer[4..]);
+                var usageBitmap = new MdbBitArray(buffer[4..]);
 
                 for (int j = 1; j < usageBitmap.Length; j++)
                     if (usageBitmap[j])
@@ -504,7 +500,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             throw new FormatException();
     }
 
-    internal async IAsyncEnumerable<ImmutableArray<IMdbValue>> ReadDataPageAsync(int page, MdbTable table, HashSet<string>? columnsToTake, [EnumeratorCancellation] CancellationToken ct)
+    private async IAsyncEnumerable<ImmutableArray<IMdbValue>> ReadDataPageAsync(int page, MdbTable table, HashSet<string>? columnsToTake, [EnumeratorCancellation] CancellationToken ct)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -536,13 +532,14 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
             if (rowOffset.IsDeleted)
                 continue;
 
+            var rowData = buffer[rowOffset.StartOffset..rowOffset.EndOffset];
             yield return rowOffset.IsLookup
-                ? CrackRow(table, rowOffset, buffer, columnsToTake)
-                : CrackRow(table, rowOffset, buffer, columnsToTake);
+                ? CrackRow(table, rowData, columnsToTake)
+                : CrackRow(table, rowData, columnsToTake);
         }
     }
 
-    internal IEnumerable<ImmutableArray<IMdbValue>> ReadDataPage(int page, MdbTable table, HashSet<string>? columnsToTake)
+    private IEnumerable<ImmutableArray<IMdbValue>> ReadDataPage(int page, MdbTable table, HashSet<string>? columnsToTake)
     {
         // +--------------------------------------------------------------------------+
         // | Jet3 Data Page Definition                                                |
@@ -573,22 +570,24 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
         {
             if (rowOffset.IsDeleted)
                 continue;
+
+            var rowData = buffer[rowOffset.StartOffset..rowOffset.EndOffset];
             yield return rowOffset.IsLookup
-                ? CrackRow(table, rowOffset, buffer, columnsToTake)
-                : CrackRow(table, rowOffset, buffer, columnsToTake);
+                ? CrackRow(table, rowData, columnsToTake)
+                : CrackRow(table, rowData, columnsToTake);
         }
     }
 
-    private ImmutableArray<IMdbValue> CrackRow(MdbTable table, RowOffset row, ReadOnlySpan<byte> buffer, HashSet<string>? columnsToTake)
+    private ImmutableArray<IMdbValue> CrackRow(MdbTable table, ReadOnlyMemory<byte> regionMem, HashSet<string>? columnsToTake)
     {
         int numCols = columnsToTake == null ? table.Columns.Length : columnsToTake.Count;
         ImmutableArray<IMdbValue>.Builder fields = ImmutableArray.CreateBuilder<IMdbValue>(numCols);
-        ReadOnlySpan<byte> region = buffer[row.StartOffset..row.EndOffset];
+        var region = regionMem.Span;
 
         short numFixedCols = Db.JetVersion == JetVersion.Jet3 ? region[0] : MdbBinary.ReadInt16LittleEndian(region);
 
         int nullBitmaskSize = (numFixedCols + 7) / 8;
-        BitArray nullBitmask = new(region[^nullBitmaskSize..].ToArray());
+        var nullBitmask = new MdbBitArray(regionMem[^nullBitmaskSize..]);
         short numVarCols = 0;
         if (table.NumVarCols > 0)
         {
@@ -831,7 +830,7 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     internal async IAsyncEnumerable<MdbDataRow> EnumerateRowsAsync(MdbTable table, HashSet<string>? columnsToTake, [EnumeratorCancellation] CancellationToken ct)
     {
-        byte[] usageMap = await ReadUsageMapAsync(table.UsedPagesPtr, ct).ConfigureAwait(false);
+        var usageMap = await ReadUsageMapAsync(table.UsedPagesPtr, ct).ConfigureAwait(false);
         var columnMap = CreateColumnMap(table.Columns, columnsToTake, Options.TableNameComparison, Options.RowDictionaryCreationThreshold);
 
         if (columnsToTake?.Count == 0)
@@ -848,8 +847,8 @@ internal abstract partial class Jet3Reader : IDisposable, IAsyncDisposable
 
     internal IEnumerable<MdbDataRow> EnumerateRows(MdbTable table, HashSet<string>? columnsToTake)
     {
-        byte[] usageMap = ReadUsageMap(table.UsedPagesPtr);
-        //byte[] freeMap = Reader.ReadUsageMap(table.FreePagesPtr);
+        var usageMap = ReadUsageMap(table.UsedPagesPtr);
+        //var freeMap = ReadUsageMap(table.FreePagesPtr);
         var columnMap = CreateColumnMap(table.Columns, columnsToTake, Options.TableNameComparison, Options.RowDictionaryCreationThreshold);
 
         if (columnsToTake?.Count == 0)
